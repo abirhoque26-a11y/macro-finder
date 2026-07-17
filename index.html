@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Macro Mastery — weekly macro meal planner</title>
+<meta name="description" content="Eat for your goals, not a spreadsheet. Recipes matched to your macros, a shopping list with UK supermarket prices, and swaps when you're over budget.">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Work+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap');
+
+:root{
+  /* Editorial palette */
+  --paper:#141412;            /* legacy alias: "paper" text is now ink on light bg */
+  --ink:#141412;
+  --cream:#F4EFE1;
+  --card:#FFFDF6;
+  --card-alt:#F6F1E2;
+  --orange:#E8551D;
+  --orange-deep:#C4440F;
+  --gold:#D9B44A;
+  --line:#DED5BC;
+  --line-strong:#C9BFA4;
+  --muted:#6E695C;
+  /* legacy aliases still referenced by generated markup */
+  --bg:#FFFDF6; --panel:#FFFDF6; --panel-raised:#F1EAD6;
+  --herb:#4E6B24; --herb-dim:#3F5A1C; --yolk:#A87F16; --danger:#C4441C;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:'Work Sans',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
+img{max-width:100%;}
+.inner{max-width:1220px;margin:0 auto;padding:0 28px;}
+
+/* ---------- Header ---------- */
+.site-head{position:sticky;top:0;z-index:100;background:var(--cream);border-bottom:1px solid var(--ink);}
+.head-inner{max-width:1220px;margin:0 auto;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.nav-logo{font-family:'Anton',sans-serif;font-size:22px;letter-spacing:.02em;color:var(--ink);text-decoration:none;white-space:nowrap;}
+.nav-logo b{color:var(--orange);font-weight:400;}
+.nav-logo i{font-family:'Oswald',sans-serif;font-style:normal;font-size:11px;letter-spacing:.14em;color:var(--muted);margin-left:4px;vertical-align:2px;}
+.nav-links{display:flex;gap:28px;flex-wrap:wrap;}
+.nav-links a{color:var(--ink);text-decoration:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:4px 0;border-bottom:2px solid transparent;}
+.nav-links a:hover{border-bottom-color:var(--orange);color:var(--orange);}
+.nav-account{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.nav-account .acct{display:flex;gap:10px;align-items:center;font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.06em;color:var(--muted);}
+.nav-account strong{color:var(--ink);font-weight:600;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pill-btn{background:var(--ink);color:var(--cream);border:1.5px solid var(--ink);font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:10px 24px;border-radius:999px;cursor:pointer;}
+.pill-btn:hover{background:var(--orange);border-color:var(--orange);}
+.pill-btn.ghost{background:transparent;color:var(--ink);}
+.pill-btn.ghost:hover{background:var(--ink);color:var(--cream);}
+
+/* ---------- Auth shelf & saved plans ---------- */
+.auth-shelf{max-width:1220px;margin:0 auto;padding:0 28px;}
+.profile-edit-row{display:none;margin-top:18px;}
+.profile-edit-row.show{display:block;}
+.auth-card{background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:24px 26px;}
+.auth-card h4{margin:0 0 6px;font-family:'Anton',sans-serif;font-size:20px;text-transform:uppercase;letter-spacing:.02em;}
+.auth-card .hint{margin:0 0 14px;}
+.auth-fields{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.auth-fields input{flex:1;min-width:210px;background:var(--card);border:1.5px solid var(--line-strong);color:var(--ink);padding:12px 14px;border-radius:4px;font-family:'Work Sans',sans-serif;font-size:14px;}
+.saved-plans-panel{display:none;background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:18px 22px;margin-top:16px;}
+.saved-plans-panel.show{display:block;}
+.saved-plan-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.saved-plan-row:last-child{border-bottom:none;}
+.saved-plan-row strong{font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:.02em;}
+
+/* ---------- Hero ---------- */
+.hero-sec{padding:64px 0 60px;}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;}
+.eyebrow{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);margin:0 0 22px;display:flex;align-items:center;gap:10px;}
+.eyebrow::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--orange);flex-shrink:0;}
+h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7.2vw,96px);line-height:.96;letter-spacing:.005em;margin:0 0 26px;text-transform:uppercase;}
+.display .hl{background:var(--orange);color:var(--cream);padding:0 16px 4px;display:inline-block;line-height:1.02;}
+.display em{font-family:'Instrument Serif',serif;font-style:italic;text-transform:none;font-size:.94em;letter-spacing:0;}
+.hero-sub{font-size:17px;line-height:1.65;color:#403B2E;max-width:480px;margin:0 0 30px;}
+.hero-cta{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.cta-orange{background:var(--orange);color:#FFF6ED;border:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:14px;letter-spacing:.16em;text-transform:uppercase;padding:19px 38px;border-radius:999px;cursor:pointer;transition:background .15s;}
+.cta-orange:hover{background:var(--orange-deep);}
+.micro{font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
+.hero-photo{position:relative;}
+.hero-photo img{width:100%;height:540px;object-fit:cover;display:block;border-radius:6px;}
+.hero-card{position:absolute;left:22px;right:22px;bottom:22px;background:var(--card);border-radius:5px;padding:15px 18px;box-shadow:0 12px 34px rgba(20,20,18,.22);}
+.hero-card .hc-top{display:flex;justify-content:space-between;font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.hero-card .hc-top .kcal{color:var(--orange);font-weight:600;}
+.hero-card p{margin:0 0 6px;font-weight:600;font-size:16px;color:var(--ink);}
+.hero-card .hc-macros{font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:.14em;color:var(--muted);}
+
+/* ---------- Stats ---------- */
+.stats-sec{padding:0 0 76px;}
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);border:1.5px solid var(--ink);border-radius:6px;overflow:hidden;}
+.stat{padding:30px 26px 26px;}
+.stat + .stat{border-left:1.5px solid var(--ink);}
+.stat-n{display:block;font-family:'Anton',sans-serif;font-size:58px;line-height:1;}
+.stat-l{display:block;font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;margin-top:10px;}
+.stat.s-gold{background:var(--gold);color:var(--ink);}
+.stat.s-ink{background:var(--ink);color:var(--cream);}
+.stat.s-orange{background:var(--orange);color:#FFF6ED;}
+.stat.s-paper{background:transparent;color:var(--ink);}
+
+/* ---------- Section headers ---------- */
+.sec-eyebrow{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin:0 0 18px;}
+.sec-eyebrow::before{content:'— ';}
+.sec-title{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(42px,5.6vw,76px);line-height:.98;margin:0;text-transform:uppercase;letter-spacing:.005em;}
+.serif-line{font-family:'Instrument Serif',serif;font-style:italic;font-size:clamp(24px,3vw,38px);margin:14px 0 0;line-height:1.2;}
+
+/* ---------- Planner (black section) ---------- */
+.planner-sec{background:var(--ink);color:var(--cream);padding:76px 0 88px;}
+.planner-sec .sec-eyebrow{color:var(--orange);}
+.planner-sec .sec-title{color:var(--cream);}
+.planner-sec .sec-title .accent{color:var(--orange);}
+.form-panel{background:var(--card-alt);color:var(--ink);border-radius:8px;padding:42px;margin-top:40px;}
+.wizard-progress{display:flex;gap:8px;margin-bottom:28px;}
+.wizard-progress .wp{flex:1;height:5px;border-radius:999px;background:#DCD3BB;transition:background .3s;}
+.wizard-progress .wp.done{background:var(--ink);}
+.wizard-progress .wp.current{background:var(--orange);}
+.wizard-step{display:none;}
+.wizard-step.active{display:block;animation:stepIn .25s ease;}
+@keyframes stepIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+.wizard-head{margin-bottom:24px;}
+.wizard-head h3{font-family:'Anton',sans-serif;font-weight:400;font-size:30px;text-transform:uppercase;margin:0 0 8px;color:var(--ink);letter-spacing:.01em;}
+.wizard-head p{font-size:14px;color:var(--muted);margin:0;max-width:640px;line-height:1.6;}
+.wizard-nav{display:flex;justify-content:space-between;align-items:center;margin-top:30px;gap:12px;border-top:1px solid var(--line);padding-top:24px;}
+.wizard-count{font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);}
+
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px;align-items:start;}
+.form-full{grid-column:1/-1;}
+.field label{display:flex;align-items:center;gap:8px;font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;}
+.badge{font-family:'Oswald',sans-serif;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:999px;font-weight:600;}
+.badge.advised{background:rgba(232,85,29,.1);color:var(--orange-deep);border:1px solid rgba(232,85,29,.45);}
+.badge.optional{background:transparent;color:var(--muted);border:1px solid var(--line-strong);}
+.field input[type="number"], .field input[type="text"], .field input[type="email"], .field input[type="password"], select.sel{width:100%;background:var(--card);border:1.5px solid var(--line-strong);color:var(--ink);padding:13px 15px;border-radius:4px;font-family:'Work Sans',sans-serif;font-size:15px;}
+.field input:focus, .seg button:focus-visible, .chip:focus-visible, .btn:focus-visible, .pill-btn:focus-visible, select.sel:focus{outline:2.5px solid var(--orange);outline-offset:2px;}
+.hint{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.55;}
+
+/* segments */
+.seg{display:flex;border:1.5px solid var(--ink);border-radius:5px;overflow:hidden;flex-wrap:wrap;background:var(--card);}
+.seg button{flex:1;min-width:86px;background:var(--card);border:none;color:var(--muted);padding:13px 10px;font-family:'Oswald',sans-serif;font-weight:600;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-right:1px solid var(--line);}
+.seg button:last-child{border-right:none;}
+.seg button.active{background:var(--ink);color:var(--cream);}
+/* goal cards */
+#seg-goal{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;border:none;background:transparent;overflow:visible;}
+#seg-goal button{background:var(--card);border:1.5px solid var(--line-strong);border-radius:6px;padding:22px 20px 18px;text-align:left;font-family:'Anton',sans-serif;font-weight:400;font-size:24px;letter-spacing:.02em;text-transform:uppercase;color:var(--ink);cursor:pointer;min-width:0;}
+#seg-goal button small{display:block;font-family:'Oswald',sans-serif;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--muted);margin-top:8px;}
+#seg-goal button.active{border-color:var(--orange);background:#FAE7DB;box-shadow:inset 0 0 0 1px var(--orange);}
+#seg-goal button.active small{color:var(--orange-deep);}
+
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{background:var(--card);border:1.5px solid var(--line-strong);color:var(--muted);padding:9px 18px;border-radius:999px;font-family:'Oswald',sans-serif;font-weight:600;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .12s;}
+.chip.active{border-color:var(--ink);color:var(--cream);background:var(--ink);}
+
+/* buttons */
+.btn{background:var(--orange);color:#FFF6ED;border:1.5px solid var(--orange);font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding:14px 32px;border-radius:999px;cursor:pointer;transition:background .15s;}
+.btn:hover{background:var(--orange-deep);border-color:var(--orange-deep);}
+.btn.secondary{background:transparent;border:1.5px solid var(--ink);color:var(--ink);}
+.btn.secondary:hover{background:var(--ink);color:var(--cream);}
+.btn.small{font-size:11px;padding:9px 20px;}
+#suggestBtn, #wkSuggestBtn{background:var(--gold);border:1.5px solid var(--ink);color:var(--ink);border-radius:5px;}
+#suggestBtn:hover, #wkSuggestBtn:hover{background:#E5C35E;}
+.actions{margin-top:28px;display:flex;justify-content:flex-end;}
+
+/* ---------- Pantry / results ---------- */
+.pantry-sec{padding:80px 0 64px;}
+.pantry-head{margin-bottom:44px;}
+.pantry-head .sec-eyebrow{color:var(--orange-deep);}
+.pantry-flex{display:flex;gap:36px;align-items:flex-start;}
+.pantry-side{width:330px;flex-shrink:0;position:sticky;top:92px;}
+.pantry-main{flex:1;min-width:0;}
+
+.label-card{background:var(--card);color:var(--ink);border:2px solid var(--ink);border-radius:5px;padding:22px 24px;width:100%;font-family:'Oswald',sans-serif;margin-bottom:24px;}
+.label-card .title{font-family:'Anton',sans-serif;font-weight:400;font-size:26px;text-transform:uppercase;letter-spacing:.02em;border-bottom:8px solid var(--ink);padding-bottom:6px;margin:0 0 8px;}
+.label-card .servline{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid var(--ink);padding:6px 0;}
+.label-row{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line);}
+.label-row.thick{border-bottom:4px solid var(--ink);font-weight:600;font-size:16px;}
+.label-row .num{font-weight:600;text-align:right;}
+.label-foot{font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5;font-family:'Work Sans',sans-serif;}
+
+.results-head{display:flex;align-items:baseline;justify-content:space-between;margin:8px 0 20px;border-bottom:2px solid var(--ink);padding-bottom:12px;flex-wrap:wrap;gap:8px;}
+.results-head h2{font-family:'Anton',sans-serif;font-weight:400;font-size:30px;text-transform:uppercase;letter-spacing:.02em;margin:0;}
+.results-count{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
+.empty{border:1.5px dashed var(--line-strong);border-radius:6px;padding:44px 24px;text-align:center;color:var(--muted);}
+
+/* recipe cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(295px,1fr));gap:24px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s ease, box-shadow .15s ease;}
+.card:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(20,20,18,.14);}
+.card-hero{height:195px;position:relative;background:#E9E2CC;}
+.card-photo{width:100%;height:100%;object-fit:cover;display:block;}
+.meal-badge{position:absolute;top:12px;left:12px;background:var(--ink);color:var(--cream);font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;padding:6px 13px;border-radius:999px;}
+.price-badge{position:absolute;top:12px;right:12px;background:var(--orange);color:#FFF6ED;font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.05em;padding:5px 13px;border-radius:999px;}
+.skill-badge{position:absolute;bottom:12px;left:12px;background:rgba(20,20,18,.78);color:var(--cream);font-family:'Oswald',sans-serif;font-weight:600;font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;padding:5px 11px;border-radius:999px;}
+.fav-btn{position:absolute;bottom:10px;right:10px;background:var(--card);border:none;color:var(--ink);border-radius:999px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;padding:0;line-height:1;box-shadow:0 3px 10px rgba(20,20,18,.3);}
+.fav-btn:hover{transform:scale(1.08);}
+.fav-btn.active{background:var(--orange);color:#FFF6ED;}
+.card-top{padding:17px 19px 11px;}
+.card-name{font-family:'Anton',sans-serif;font-weight:400;font-size:21px;letter-spacing:.02em;text-transform:uppercase;margin:0 0 10px;line-height:1.08;}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px;}
+.tag{font-family:'Oswald',sans-serif;font-weight:600;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:transparent;color:var(--muted);border:1px solid var(--line-strong);}
+.tag.pp{background:rgba(217,180,74,.2);color:#8A6A14;border-color:var(--gold);}
+.macros{display:flex;gap:26px;padding:13px 19px;border-top:1px solid var(--line);font-family:'Oswald',sans-serif;}
+.macro .n{font-family:'Anton',sans-serif;font-size:23px;font-weight:400;color:var(--ink);display:block;line-height:1.1;}
+.macro .l{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;}
+.match-note{padding:0 19px 12px;font-size:12px;color:var(--orange-deep);font-weight:500;}
+.ingredients{padding:0 19px 15px;font-size:13px;color:#4B463A;line-height:1.55;}
+.ing-row{margin-bottom:8px;}
+.ing-row strong{color:var(--ink);font-weight:600;}
+.store-links{display:block;margin-top:1px;}
+.store-links a{color:#A0500F;text-decoration:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-right:9px;}
+.store-links a:hover{text-decoration:underline;}
+.recipe-panel{display:none;padding:16px 19px;background:var(--card-alt);border-top:1px dashed var(--line-strong);font-size:13px;line-height:1.65;}
+.recipe-panel.open{display:block;}
+.recipe-panel h4{margin:0 0 7px;font-family:'Anton',sans-serif;font-weight:400;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);}
+.recipe-panel ol{margin:0 0 12px;padding-left:18px;color:#3F3B2F;}
+.recipe-panel ul{margin:0 0 12px;padding-left:18px;color:#5B5546;}
+.card-links{margin-top:auto;display:flex;border-top:1.5px solid var(--ink);}
+.card-links a, .card-links button{flex:1;text-align:center;padding:14px 8px;color:var(--ink);text-decoration:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;border-right:1.5px solid var(--ink);background:none;border-top:none;border-bottom:none;border-left:none;cursor:pointer;transition:all .12s;}
+.card-links a:last-child, .card-links button:last-child{border-right:none;}
+.card-links a:hover, .card-links button:hover{background:var(--ink);color:var(--cream);}
+.no-video{flex:1;text-align:center;padding:14px 8px;color:var(--muted);font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;border-right:1.5px solid var(--ink);cursor:default;}
+
+/* ---------- Week ask + panel ---------- */
+.ask-block{background:var(--ink);color:var(--cream);border-radius:8px;padding:32px 36px;margin-top:52px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;}
+.ask-block p{margin:0;font-family:'Anton',sans-serif;font-weight:400;font-size:27px;text-transform:uppercase;letter-spacing:.02em;line-height:1.1;}
+.ask-buttons{display:flex;gap:10px;flex-wrap:wrap;}
+.ask-block .btn.secondary{border-color:var(--cream);color:var(--cream);}
+.ask-block .btn.secondary:hover{background:var(--cream);color:var(--ink);}
+
+#weekPanel{display:none;background:var(--card);border:2px solid var(--ink);border-radius:8px;padding:38px;margin-top:26px;}
+#weekPanel > .form-grid:first-child{margin-top:0;}
+.week-kicker{font-family:'Anton',sans-serif;font-size:26px;text-transform:uppercase;margin:0 0 20px;letter-spacing:.02em;}
+
+.variety-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:4px;}
+.variety-item{background:var(--card-alt);border:1px solid var(--line-strong);border-radius:5px;padding:11px 13px;}
+.variety-item span{display:block;font-family:'Oswald',sans-serif;font-weight:600;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.variety-item input{width:100%;background:none;border:none;color:var(--ink);font-family:'Anton',sans-serif;font-size:21px;padding:0;}
+
+.week-table-wrap{overflow-x:auto;margin-top:24px;border:1px solid var(--line);border-radius:6px;}
+table.week{width:100%;border-collapse:collapse;font-size:13px;min-width:860px;background:var(--card);}
+table.week th{font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--cream);background:var(--ink);text-align:left;padding:11px 12px;}
+table.week td{padding:12px;vertical-align:top;border-bottom:1px solid var(--line);}
+table.week tr:last-child td{border-bottom:none;}
+table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink);white-space:nowrap;}
+.slot-cell .rname{font-weight:600;color:var(--ink);display:block;margin-bottom:2px;}
+.slot-cell .rmacro{font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:.04em;color:var(--muted);display:block;}
+.slot-cell.search-hit{background:rgba(232,85,29,.12);outline:1.5px solid var(--orange);}
+.swap-btn{margin-top:6px;background:none;border:1px solid var(--ink);color:var(--ink);font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 11px;border-radius:999px;cursor:pointer;}
+.swap-btn:hover{background:var(--ink);color:var(--cream);}
+.week-summary{display:flex;gap:34px;flex-wrap:wrap;margin-top:22px;font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+.week-summary .n{font-family:'Anton',sans-serif;font-weight:400;font-size:27px;letter-spacing:.01em;color:var(--ink);display:block;line-height:1.15;}
+.week-summary .over{color:var(--danger)!important;}
+
+.shop-list{margin-top:12px;}
+.shop-cat{margin-bottom:22px;}
+.shop-cat h4{font-family:'Anton',sans-serif;font-weight:400;font-size:17px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink);border-bottom:2px solid var(--ink);padding-bottom:7px;margin:0 0 8px;}
+.shop-item{padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.shop-item .qty{font-family:'Oswald',sans-serif;font-weight:600;color:var(--orange-deep);margin-left:8px;}
+.shop-item .used-in{color:var(--muted);font-size:11px;margin-top:2px;}
+.shop-item .links{margin-top:4px;}
+.shop-item .links a{color:#A0500F;text-decoration:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-right:11px;}
+.shop-item .links a:hover{text-decoration:underline;}
+
+.progress-block{margin-top:34px;padding:24px;background:rgba(217,180,74,.22);border:1.5px solid var(--gold);border-radius:6px;}
+.progress-days{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;}
+.progress-day{display:flex;flex-direction:column;align-items:center;gap:6px;font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.progress-day input{width:19px;height:19px;accent-color:var(--orange);cursor:pointer;}
+
+.save-plan-row{margin-top:26px;padding-top:22px;border-top:1px dashed var(--line-strong);display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.save-plan-row input{flex:1;min-width:200px;background:var(--card);border:1.5px solid var(--line-strong);color:var(--ink);padding:12px 14px;border-radius:4px;font-family:'Work Sans',sans-serif;font-size:14px;}
+
+.foot-note{margin-top:56px;font-size:12px;color:var(--muted);border-top:1px solid var(--line-strong);padding-top:18px;line-height:1.7;}
+
+/* ---------- Method (gold section) ---------- */
+.method-sec{background:var(--gold);color:var(--ink);padding:80px 0 92px;}
+.method-sec .sec-eyebrow{color:var(--ink);}
+.method-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:34px;margin-top:52px;}
+.m-col{border-top:2px solid var(--ink);padding-top:20px;}
+.m-num{font-family:'Anton',sans-serif;font-size:36px;line-height:1;display:block;margin-bottom:14px;}
+.m-col h4{font-family:'Work Sans',sans-serif;font-weight:700;font-size:17px;margin:0 0 8px;}
+.m-col p{font-size:14px;line-height:1.6;color:#3E3512;margin:0;}
+
+/* ---------- Footer ---------- */
+.site-foot{background:var(--ink);color:var(--cream);padding:60px 0 42px;}
+.foot-grid{display:flex;justify-content:space-between;align-items:flex-start;gap:32px;flex-wrap:wrap;}
+.foot-logo{font-family:'Anton',sans-serif;font-size:42px;letter-spacing:.02em;line-height:1;margin:0 0 10px;}
+.foot-tag{color:#A9A28E;font-size:14px;margin:0;}
+.foot-links{display:flex;flex-direction:column;gap:12px;}
+.foot-links a{color:var(--cream);text-decoration:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.16em;text-transform:uppercase;}
+.foot-links a:hover{color:var(--orange);}
+.foot-bottom{margin-top:48px;padding-top:22px;border-top:1px solid #33312B;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#8B8471;}
+
+/* ---------- Responsive ---------- */
+@media(max-width:1000px){
+  .hero-grid{grid-template-columns:1fr;gap:40px;}
+  .hero-photo img{height:400px;}
+  .pantry-flex{flex-direction:column;}
+  .pantry-side{width:100%;position:static;}
+  .label-card{max-width:420px;}
+  .method-grid{grid-template-columns:repeat(2,1fr);}
+  .stats-strip{grid-template-columns:repeat(2,1fr);}
+  .stat + .stat{border-left:none;}
+  .stat:nth-child(even){border-left:1.5px solid var(--ink);}
+  .stat:nth-child(n+3){border-top:1.5px solid var(--ink);}
+}
+@media(max-width:640px){
+  .head-inner{padding:12px 18px;}
+  .nav-links{gap:16px;}
+  .inner, .auth-shelf{padding-left:18px;padding-right:18px;}
+  .form-panel, #weekPanel{padding:24px 18px;}
+  #seg-goal{grid-template-columns:1fr;}
+  .method-grid{grid-template-columns:1fr;}
+  .actions{justify-content:stretch;}
+  .actions .btn{width:100%;}
+  .ask-block{flex-direction:column;align-items:flex-start;}
+  .hero-sec{padding-top:40px;}
+  .hero-photo img{height:300px;}
+  .hero-card{left:12px;right:12px;bottom:12px;}
+  .wizard-nav{flex-wrap:wrap;}
+}
+</style>
+</head>
+
+<body>
+
+<header class="site-head">
+  <div class="head-inner">
+    <a class="nav-logo" href="/">MACRO <b>MASTERY</b><i>/UK</i></a>
+    <nav class="nav-links">
+      <a href="#planner">Planner</a>
+      <a href="#matches">Recipes</a>
+      <a href="#how">How it works</a>
+      <a href="/about.html">About</a>
+    </nav>
+    <div class="nav-account">
+      <div class="acct" id="guestBar">
+        <button class="pill-btn" id="showAuthBtn" type="button">Sign in</button>
+      </div>
+      <div class="acct" id="authedBar" style="display:none;">
+        <strong id="userEmailDisplay"></strong>
+        <button class="pill-btn ghost" id="signOutBtn" type="button">Sign out</button>
+      </div>
+      <button class="pill-btn ghost" id="viewPlansBtn" type="button" style="display:none;">My plans (<span id="planCount">0</span>)</button>
+    </div>
+  </div>
+</header>
+
+<div class="auth-shelf">
+  <div class="profile-edit-row" id="authRow">
+    <div class="auth-card">
+      <h4>Sign in or create a free account</h4>
+      <p class="hint">Save your plans, favourites and cooking checklist. New here? Enter an email and password and hit <strong>Create account</strong> — it takes a few seconds. Next time, use <strong>Sign in</strong> with the same details.</p>
+      <div class="auth-fields">
+        <input type="email" id="authEmail" placeholder="Your email address">
+        <input type="password" id="authPassword" placeholder="Password (6+ characters)">
+        <button class="btn small" id="authSignInBtn" type="button">Sign in</button>
+        <button class="btn small secondary" id="authSignUpBtn" type="button">Create account</button>
+      </div>
+      <span class="hint" id="authMsg" style="display:block;margin-top:8px;"></span>
+    </div>
+  </div>
+  <div class="saved-plans-panel" id="savedPlansPanel"></div>
+</div>
+
+<section class="hero-sec">
+  <div class="inner hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">Issue 01 · Weekly macro planner</p>
+      <h1 class="display">Eat for<br>your goals.<br><span class="hl">Not a</span><br><em>spreadsheet.</em></h1>
+      <p class="hero-sub">Tell us your targets. We'll build your week — recipes matched to your macros, a shopping list with UK supermarket prices, and swaps when you're over budget.</p>
+      <div class="hero-cta">
+        <button class="cta-orange" id="heroStartBtn" type="button">Build my week →</button>
+        <span class="micro">Free · No spreadsheet · 60 seconds</span>
+      </div>
+    </div>
+    <div class="hero-photo">
+      <img src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1000&q=75" alt="Fresh whole ingredients laid out on a table">
+      <div class="hero-card">
+        <div class="hc-top"><span>Today · Lunch</span><span class="kcal">642 kcal</span></div>
+        <p>Grilled chicken, sweet potato, quinoa</p>
+        <span class="hc-macros">P·48&nbsp;&nbsp;&nbsp;C·62&nbsp;&nbsp;&nbsp;F·18</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="stats-sec">
+  <div class="inner">
+    <div class="stats-strip">
+      <div class="stat s-gold"><span class="stat-n">82+</span><span class="stat-l">Recipes &amp; growing</span></div>
+      <div class="stat s-ink"><span class="stat-n">5</span><span class="stat-l">UK supermarkets linked</span></div>
+      <div class="stat s-orange"><span class="stat-n">100%</span><span class="stat-l">Personalised to your macros</span></div>
+      <div class="stat s-paper"><span class="stat-n">£0</span><span class="stat-l">Free to use</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="planner-sec" id="planner">
+  <div class="inner">
+    <p class="sec-eyebrow">The Planner</p>
+    <h2 class="sec-title">Four steps.<br><span class="accent">One week of food.</span></h2>
+
+    <div class="form-panel" id="wizardPanel">
+      <div class="wizard-progress">
+        <div class="wp current" data-step="1"></div>
+        <div class="wp" data-step="2"></div>
+        <div class="wp" data-step="3"></div>
+        <div class="wp" data-step="4"></div>
+      </div>
+
+      <!-- STEP 1: Goal -->
+      <div class="wizard-step active" data-step="1">
+        <div class="wizard-head">
+          <h3>What's your goal right now?</h3>
+          <p>This shapes which recipes we recommend — higher protein-per-calorie in a cut, more energy-dense in a bulk.</p>
+        </div>
+        <div class="form-grid">
+          <div class="field form-full">
+            <div class="seg" id="seg-goal">
+              <button data-val="deficit" class="active">Deficit<small>Cutting</small></button>
+              <button data-val="maintenance">Maintain<small>Recomp</small></button>
+              <button data-val="surplus">Surplus<small>Bulking</small></button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Height (cm) <span class="badge optional">Optional</span></label>
+            <input type="number" id="height" placeholder="175">
+          </div>
+          <div class="field">
+            <label>Weight (kg) <span class="badge optional">Optional</span></label>
+            <input type="number" id="weight" placeholder="72">
+          </div>
+          <div class="field form-full" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <button class="btn secondary small" id="suggestBtn" type="button">✦ Suggest targets from my weight</button>
+            <span class="hint" id="suggestMsg" style="margin:0;"></span>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <span class="wizard-count">Step 1 of 4</span>
+          <button class="btn" type="button" onclick="wizardGo(2)">Next →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Meal -->
+      <div class="wizard-step" data-step="2">
+        <div class="wizard-head">
+          <h3>Which meal are you planning?</h3>
+          <p>Or search for something specific by name or ingredient.</p>
+        </div>
+        <div class="form-grid">
+          <div class="field form-full">
+            <div class="seg" id="seg-meal">
+              <button data-val="breakfast" class="active">Breakfast</button>
+              <button data-val="lunch">Lunch</button>
+              <button data-val="dinner">Dinner</button>
+              <button data-val="snack">Snack</button>
+              <button data-val="shake">Shake</button>
+            </div>
+          </div>
+          <div class="field form-full">
+            <label>Search recipes <span class="badge optional">Optional</span></label>
+            <input type="text" id="recipeSearch" placeholder="Search by name or ingredient — e.g. salmon, chicken, tofu...">
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button class="btn secondary" type="button" onclick="wizardGo(1)">← Back</button>
+          <span class="wizard-count">Step 2 of 4</span>
+          <button class="btn" type="button" onclick="wizardGo(3)">Next →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Preferences -->
+      <div class="wizard-step" data-step="3">
+        <div class="wizard-head">
+          <h3>Any preferences or requirements?</h3>
+          <p>All optional — skip anything that doesn't apply and hit Next.</p>
+        </div>
+        <div class="form-grid">
+          <div class="field form-full">
+            <label>Dietary requirements <span class="badge optional">Optional</span></label>
+            <div class="chips" id="chip-diet">
+              <div class="chip" data-val="halal">Halal</div>
+              <div class="chip" data-val="vegetarian">Vegetarian</div>
+              <div class="chip" data-val="vegan">Vegan</div>
+              <div class="chip" data-val="gluten-free">Gluten-free</div>
+              <div class="chip" data-val="dairy-free">Dairy-free</div>
+            </div>
+          </div>
+          <div class="field form-full">
+            <div class="chips">
+              <div class="chip" id="favOnlyChip">♥ Favourites only</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Preferred protein source <span class="badge optional">Optional</span></label>
+            <select class="sel" id="sel-protein">
+              <option value="any">Any</option>
+              <option value="chicken">Chicken</option>
+              <option value="beef">Beef</option>
+              <option value="lamb">Lamb</option>
+              <option value="fish">Fish</option>
+              <option value="seafood">Seafood (prawns etc.)</option>
+              <option value="turkey">Turkey</option>
+              <option value="eggs">Eggs</option>
+              <option value="paneer">Paneer / halloumi</option>
+              <option value="dairy">Dairy (yogurt/cheese)</option>
+              <option value="tofu">Tofu</option>
+              <option value="plant">Other plant protein (beans/lentils)</option>
+            </select>
+            <p class="hint">Mainly useful for lunch and dinner.</p>
+          </div>
+          <div class="field">
+            <label>Preferred carb source <span class="badge optional">Optional</span></label>
+            <select class="sel" id="sel-carb">
+              <option value="any">Any</option>
+              <option value="rice">Rice</option>
+              <option value="pasta">Pasta / noodles</option>
+              <option value="wrap">Wrap / tortilla</option>
+              <option value="bread">Bread</option>
+              <option value="potato">Potato</option>
+              <option value="quinoa">Quinoa / couscous</option>
+              <option value="oats">Oats</option>
+              <option value="none">None / low-carb</option>
+            </select>
+            <p class="hint">Mainly useful for lunch and dinner.</p>
+          </div>
+          <div class="field form-full">
+            <label>Cooking skill <span class="badge optional">Optional</span></label>
+            <div class="seg" id="seg-skill">
+              <button data-val="any" class="active">Any level</button>
+              <button data-val="beginner">Beginner</button>
+              <button data-val="intermediate">Intermediate</button>
+              <button data-val="advanced">Advanced</button>
+            </div>
+          </div>
+          <div class="field form-full">
+            <label>Protein powder <span class="badge optional">Optional</span></label>
+            <div class="seg" id="seg-pp">
+              <button data-val="any" class="active">Doesn't matter</button>
+              <button data-val="no">Not allowed</button>
+              <button data-val="only">Prefer recipes using it</button>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button class="btn secondary" type="button" onclick="wizardGo(2)">← Back</button>
+          <span class="wizard-count">Step 3 of 4</span>
+          <button class="btn" type="button" onclick="wizardGo(4)">Next →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Targets -->
+      <div class="wizard-step" data-step="4">
+        <div class="wizard-head">
+          <h3>Set your targets for this meal</h3>
+          <p>Rough numbers are fine — you can change these anytime and the results update.</p>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Calorie goal (kcal) <span class="badge advised">Advised</span></label>
+            <input type="number" id="cal" placeholder="e.g. 500–700">
+            <p class="hint">A typical meal is 400–700 kcal. Used ✦ Suggest in step 1? It's already filled in.</p>
+          </div>
+          <div class="field">
+            <label>Protein goal (g) <span class="badge advised">Advised</span></label>
+            <input type="number" id="protein" placeholder="e.g. 30–50g">
+            <p class="hint">Rough guide: 0.4–0.6g per kg of bodyweight per meal.</p>
+          </div>
+          <div class="field">
+            <label>Budget (£) <span class="badge optional">Optional</span></label>
+            <input type="number" id="budget" placeholder="e.g. £3–5 per meal" step="0.10">
+            <p class="hint">Leave blank for no limit. A typical home-cooked meal costs £2–5.</p>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button class="btn secondary" type="button" onclick="wizardGo(3)">← Back</button>
+          <span class="wizard-count">Step 4 of 4</span>
+          <button class="btn" id="findBtn">Find my recipes →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pantry-sec" id="matches">
+  <div class="inner">
+    <div class="pantry-head">
+      <p class="sec-eyebrow">The Pantry · Your matches</p>
+      <h2 class="sec-title">Real food.<br>Real macros.</h2>
+      <p class="serif-line">priced at Tesco, Sainsbury's, Asda, Aldi &amp; Lidl.</p>
+    </div>
+
+    <div class="pantry-flex">
+      <div class="pantry-side">
+        <div id="labelWrap"></div>
+      </div>
+      <div class="pantry-main">
+        <div class="results-head">
+          <h2>Matches</h2>
+          <span class="results-count" id="resCount">—</span>
+        </div>
+        <div id="searchStatus" style="font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;min-height:18px;"></div>
+        <div id="results"></div>
+      </div>
+    </div>
+
+    <div class="ask-block">
+      <p>Want a 7-day meal plan<br>built to hit these goals?</p>
+      <div class="ask-buttons">
+        <button class="btn small" id="weekYes">Yes, build my week</button>
+        <button class="btn small secondary" id="weekNo">No thanks</button>
+      </div>
+    </div>
+
+    <div id="weekPanel">
+      <p class="week-kicker">Your week, planned</p>
+      <div class="form-grid">
+        <div class="field">
+          <label>Daily calorie goal (kcal) <span class="badge advised">Advised</span></label>
+          <input type="number" id="wkCal" placeholder="e.g. 1800–2500">
+          <p class="hint">Not sure? Use ✦ Suggest above. A typical range is 1600–2200 for deficit, 2200–3000 for surplus. You can always change this.</p>
+        </div>
+        <div class="field">
+          <label>Daily protein goal (g) <span class="badge advised">Advised</span></label>
+          <input type="number" id="wkProtein" placeholder="e.g. 120–180g">
+          <p class="hint">A common target is 1.6–2g per kg of bodyweight. So 80kg = roughly 130–160g/day.</p>
+        </div>
+        <div class="field">
+          <label>Weekly budget (£) <span class="badge optional">Optional</span></label>
+          <input type="number" id="wkBudget" placeholder="e.g. £35–60" step="1">
+          <p class="hint">Leave blank for no limit. A typical weekly food shop for one person is £30–60.</p>
+        </div>
+        <div class="field form-full" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <button class="btn secondary small" id="wkSuggestBtn" type="button">✦ Suggest daily targets</button>
+          <span class="hint" id="wkSuggestMsg" style="margin:0;"></span>
+        </div>
+        <div class="field form-full">
+          <label>Meals to include each day <span class="badge advised">Advised</span></label>
+          <div class="chips" id="chip-slots">
+            <div class="chip active" data-val="breakfast">Breakfast</div>
+            <div class="chip active" data-val="lunch">Lunch</div>
+            <div class="chip active" data-val="dinner">Dinner</div>
+            <div class="chip active" data-val="snack">Snack</div>
+            <div class="chip" data-val="shake">Shake</div>
+          </div>
+          <p class="hint">Diet, skill, protein powder, and ingredient preferences above carry over into the week. Shake is off by default — turn it on to add it as a 5th slot, or use it in place of Breakfast/Snack instead.</p>
+        </div>
+        <div class="field form-full">
+          <label>Recipe variety per meal <span class="badge optional">Optional</span></label>
+          <div class="variety-grid">
+            <div class="variety-item"><span>Breakfast</span><input type="number" id="varBreakfast" min="1" max="7" value="1"></div>
+            <div class="variety-item"><span>Lunch</span><input type="number" id="varLunch" min="1" max="7" value="3"></div>
+            <div class="variety-item"><span>Dinner</span><input type="number" id="varDinner" min="1" max="7" value="3"></div>
+            <div class="variety-item"><span>Snack</span><input type="number" id="varSnack" min="1" max="7" value="2"></div>
+            <div class="variety-item"><span>Shake</span><input type="number" id="varShake" min="1" max="7" value="2"></div>
+          </div>
+          <p class="hint">How many different recipes to rotate through across the week for each meal. Set to 1 for the same one every day, or higher for more variety. Defaults show your own example: same breakfast, a few lunches and dinners on rotation.</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="buildWeekBtn">Build my week</button>
+      </div>
+
+      <div class="field form-full" style="margin-top:20px;">
+        <label>Find a recipe in this week's plan <span class="badge optional">Optional</span></label>
+        <input type="text" id="planSearch" placeholder="e.g. chicken, salmon, fajitas...">
+        <div id="planSearchResults" class="hint" style="margin-top:8px;"></div>
+        <div id="planSearchMatches"></div>
+      </div>
+
+      <div id="weekResults"></div>
+
+      <div class="save-plan-row">
+        <input type="text" id="savePlanName" placeholder="Name this plan — e.g. Cutting Week 1">
+        <button class="btn secondary small" id="savePlanBtn" type="button">Save this plan</button>
+        <span class="hint" id="savePlanMsg"></span>
+      </div>
+    </div>
+
+    <p class="foot-note">
+      Prices are rough per-serving estimates for UK supermarkets and vary by store and season. Where a matching video exists, "Watch video" links straight to it; where it doesn't, "View recipe" always gives full written instructions regardless. Ingredient links and the shopping list open live searches on Tesco, Sainsbury's, Asda, Aldi and Lidl. In a deficit, matches lean toward higher protein-per-calorie recipes; in a surplus, toward more energy-dense ones — both still ranked primarily by closeness to your calorie and protein targets. On accounts: sign-in uses real email/password authentication via Supabase — your favourites, cooking checklist and saved plans are stored in a real database under your account, and Row Level Security policies mean only you can read or write your own rows. Recipe photos are illustrative food photography, not photos of the exact finished dish.
+    </p>
+  </div>
+</section>
+
+<section class="method-sec" id="how">
+  <div class="inner">
+    <p class="sec-eyebrow">The Method</p>
+    <h2 class="sec-title">From targets to trolley<br>in under a minute.</h2>
+    <div class="method-grid">
+      <div class="m-col">
+        <span class="m-num">01</span>
+        <h4>Set your targets</h4>
+        <p>Kcal, protein and budget — or let us suggest them from your weight and goal.</p>
+      </div>
+      <div class="m-col">
+        <span class="m-num">02</span>
+        <h4>Pick your slots</h4>
+        <p>Breakfast, lunch, dinner, snack, shake. Any subset of the week, with as much variety as you like.</p>
+      </div>
+      <div class="m-col">
+        <span class="m-num">03</span>
+        <h4>Match recipes</h4>
+        <p>We score every recipe against your macros, diet, skill level and ingredient preferences.</p>
+      </div>
+      <div class="m-col">
+        <span class="m-num">04</span>
+        <h4>Shop with prices</h4>
+        <p>One consolidated list, linked to five UK supermarkets. Swap suggestions if you're over budget.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-foot">
+  <div class="inner">
+    <div class="foot-grid">
+      <div>
+        <p class="foot-logo">MACRO MASTERY</p>
+        <p class="foot-tag">Eat for your goals. Without the spreadsheet.</p>
+      </div>
+      <div class="foot-links">
+        <a href="/about.html">About</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="mailto:macromastery@outlook.com">macromastery@outlook.com</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Macro Mastery</span>
+      <span>Made in the UK</span>
+    </div>
+  </div>
+</footer>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ---------- Supabase config — REQUIRED ----------
+   1. Create a project at https://supabase.com
+   2. Run schema.sql (then recipes_seed.sql) in the SQL Editor
+   3. Project Settings -> API -> copy the "Project URL" and "anon public" key below
+   Full walkthrough in BACKEND_SETUP_GUIDE.md */
+const SUPABASE_URL = 'https://zvntjqazcmfmvyhhvpfl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2bnRqcWF6Y21mbXZ5aGh2cGZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4Nzg4NzgsImV4cCI6MjA5OTQ1NDg3OH0.E_IkQdLrx42PcR7dOP9nkgHTt6ov2ZoMLOelQAIqpXo';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = null;
+
+if(SUPABASE_URL === 'YOUR_SUPABASE_URL'){
+  window.addEventListener('DOMContentLoaded', ()=>{
+    document.querySelector('.wrap').insertAdjacentHTML('afterbegin',
+      '<div style="background:#C97A5B;color:#1C1F1B;padding:14px 18px;border-radius:4px;margin-bottom:20px;font-family:monospace;font-size:13px;">⚠️ Set SUPABASE_URL and SUPABASE_ANON_KEY near the top of the script before sign-in and saving will work — see BACKEND_SETUP_GUIDE.md.</div>');
+  });
+}
+
+function updateAuthUI(){
+  const signedIn = !!currentUser;
+  document.getElementById('guestBar').style.display = signedIn ? 'none' : 'flex';
+  document.getElementById('authedBar').style.display = signedIn ? 'flex' : 'none';
+  document.getElementById('viewPlansBtn').style.display = signedIn ? 'inline-block' : 'none';
+  if(signedIn) document.getElementById('userEmailDisplay').textContent = currentUser.email;
+}
+document.getElementById('showAuthBtn').addEventListener('click', ()=>{
+  document.getElementById('authRow').classList.toggle('show');
+});
+document.getElementById('authSignUpBtn').addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const msg = document.getElementById('authMsg');
+  if(!email || password.length < 6){ msg.textContent = 'Enter an email and a password of at least 6 characters.'; return; }
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
+  if(error){ msg.textContent = error.message; return; }
+  msg.textContent = data.session ? 'Account created and signed in.' : 'Check your email to confirm your account, then sign in.';
+});
+document.getElementById('authSignInBtn').addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const msg = document.getElementById('authMsg');
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if(error){ msg.textContent = error.message; return; }
+  msg.textContent = '';
+  document.getElementById('authRow').classList.remove('show');
+});
+document.getElementById('signOutBtn').addEventListener('click', async ()=>{
+  await supabaseClient.auth.signOut();
+});
+supabaseClient.auth.onAuthStateChange(async (event, session)=>{
+  currentUser = session ? session.user : null;
+  updateAuthUI();
+  favourites = currentUser ? await loadFavourites() : [];
+  progress = currentUser ? await loadProgress() : {};
+  savedPlans = currentUser ? await loadSavedPlans() : {};
+  renderSavedPlansList();
+  render();
+});
+
+/* ---------- Recipe photography ----------
+   Curated food photography (Unsplash CDN, free to hotlink) keyed by the recipe's
+   icon type from the database. Each recipe picks deterministically from its set,
+   so the same recipe always shows the same photo. To use your own images, just
+   swap the photo IDs or full URLs below. */
+const FOOD_IMG = {
+  bowl:    ['photo-1546069901-ba9599a7e63c','photo-1512621776951-a57141f2eefd','photo-1467003909585-2f8a72700288'],
+  pan:     ['photo-1512058564366-18510be2db19','photo-1585937421612-70a008356fbe'],
+  wrap:    ['photo-1565299507177-b0ac66763828','photo-1626700051175-6818013e1d4f'],
+  oats:    ['photo-1517673400267-0251440c45dc'],
+  toast:   ['photo-1541519227354-08fa5d50c44d','photo-1525351484163-7529414344d8'],
+  pancake: ['photo-1567620905732-2d1ec7ab7445','photo-1528207776546-365bb710ee93'],
+  shake:   ['photo-1505252585461-04db1eb84625','photo-1553530666-ba11a7da3888'],
+  plate:   ['photo-1504674900247-0877df9cc836','photo-1532550907401-a500c9a57435','photo-1546833999-b9f581a1996d'],
+  salad:   ['photo-1540420773420-3366772f4999','photo-1512621776951-a57141f2eefd'],
+  soup:    ['photo-1547592180-85f173990554'],
+  skewer:  ['photo-1555939594-58d7cb561ad1','photo-1519708227418-c8fd9a32b7a2'],
+  snack:   ['photo-1488477181946-6428a0291777','photo-1490474418585-ba9bad8fd0ea']
+};
+const MEAL_FALLBACK = { breakfast:'toast', lunch:'bowl', dinner:'plate', snack:'snack', shake:'shake' };
+function foodImg(r){
+  const list = FOOD_IMG[r.icon] || FOOD_IMG[MEAL_FALLBACK[r.meal]] || FOOD_IMG.plate;
+  let h = 0;
+  for(const c of String(r.name)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `https://images.unsplash.com/${list[h % list.length]}?auto=format&fit=crop&w=900&q=70`;
+}
+
+/* ---------- Recipe data (64 recipes — full instructions always included; video is a bonus, not a requirement) ---------- */
+/* ---------- Step wizard ---------- */
+function wizardGo(step){
+  document.querySelectorAll('.wizard-step').forEach(s=>{
+    s.classList.toggle('active', parseInt(s.dataset.step) === step);
+  });
+  document.querySelectorAll('.wizard-progress .wp').forEach(p=>{
+    const n = parseInt(p.dataset.step);
+    p.classList.toggle('done', n < step);
+    p.classList.toggle('current', n === step);
+  });
+  document.getElementById('wizardPanel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+document.getElementById('heroStartBtn').addEventListener('click', ()=>{
+  document.getElementById('wizardPanel').scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+let RECIPES = [];
+
+async function loadRecipesFromDB(){
+  const { data, error } = await supabaseClient.from('recipes').select('*');
+  if(error){ console.error(error); return []; }
+  return data.map(row => ({
+    name: row.name,
+    meal: row.meal,
+    diet: row.diet || [],
+    skill: row.skill,
+    cal: row.cal,
+    protein: row.protein,
+    price: parseFloat(row.price),
+    pp: row.pp,
+    icon: row.icon,
+    proteinSource: row.protein_source,
+    carbSource: row.carb_source,
+    video: row.video,
+    ing: row.ingredients,
+    steps: row.steps,
+    mealPrepFriendly: row.meal_prep_friendly,
+    mealPrepTip: row.meal_prep_tip
+  }));
+}
+
+/* ---------- State ---------- */
+let state = { goal:"deficit", meal:"breakfast", diet:[], skill:"any", pp:"any", proteinPref:"any", carbPref:"any", favOnly:false };
+let favourites = [];
+let progress = {};
+let savedPlans = {};
+let weekState = { candidatesBySlot:{}, planIndex:{}, activeSlots:[], weeklyBudget:0 };
+let activeSlots = ['breakfast','lunch','dinner','snack'];
+let cardCounter = 0;
+let planSearchQuery = '';
+
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const SLOT_PROPORTIONS = { breakfast:0.22, lunch:0.27, dinner:0.31, snack:0.10, shake:0.10 };
+
+function esc(s){ return String(s).replace(/'/g, "\\'"); }
+
+/* ---------- Storage: favourites, progress, saved plans — real rows in Supabase, scoped to the
+   signed-in user by Row Level Security (see schema.sql). No user_id filtering needed client-side;
+   RLS enforces it server-side even though the anon key is public. ---------- */
+async function loadFavourites(){
+  if(!currentUser) return [];
+  const { data, error } = await supabaseClient.from('favourites').select('recipe_name').eq('user_id', currentUser.id);
+  if(error){ console.error(error); return []; }
+  return data.map(row=>row.recipe_name);
+}
+async function loadProgress(){
+  if(!currentUser) return {};
+  const { data, error } = await supabaseClient.from('progress').select('day, done').eq('user_id', currentUser.id);
+  if(error){ console.error(error); return {}; }
+  const obj = {};
+  data.forEach(row=>{ obj[row.day] = row.done; });
+  return obj;
+}
+async function loadSavedPlans(){
+  if(!currentUser) return {};
+  const { data, error } = await supabaseClient.from('saved_plans').select('name, config').eq('user_id', currentUser.id);
+  if(error){ console.error(error); return {}; }
+  const obj = {};
+  data.forEach(row=>{ obj[row.name] = row.config; });
+  return obj;
+}
+async function toggleFavourite(name){
+  if(!currentUser){
+    document.getElementById('authRow').classList.add('show');
+    document.getElementById('authMsg').textContent = 'Sign in to save favourites.';
+    return;
+  }
+  const isFav = favourites.includes(name);
+  if(isFav){
+    favourites = favourites.filter(n=>n!==name);
+    await supabaseClient.from('favourites').delete().eq('user_id', currentUser.id).eq('recipe_name', name);
+  } else {
+    favourites.push(name);
+    await supabaseClient.from('favourites').insert({ user_id: currentUser.id, recipe_name: name });
+  }
+  render();
+}
+async function toggleProgress(day, checked){
+  progress[day] = checked;
+  if(currentUser){
+    await supabaseClient.from('progress').upsert({ user_id: currentUser.id, day, done: checked, updated_at: new Date().toISOString() });
+  }
+  if(weekState.activeSlots.length) renderWeekUI();
+}
+async function resetProgress(){
+  progress = {};
+  if(currentUser) await supabaseClient.from('progress').delete().eq('user_id', currentUser.id);
+  if(weekState.activeSlots.length) renderWeekUI();
+}
+
+/* ---------- Account bar wiring ---------- */
+document.getElementById('viewPlansBtn').addEventListener('click', ()=>{
+  document.getElementById('savedPlansPanel').classList.toggle('show');
+});
+
+function snapshotCurrentPlanConfig(){
+  return {
+    goal: state.goal,
+    diet: state.diet.slice(),
+    skill: state.skill,
+    pp: state.pp,
+    proteinPref: state.proteinPref,
+    carbPref: state.carbPref,
+    height: document.getElementById('height').value,
+    weight: document.getElementById('weight').value,
+    wkCal: document.getElementById('wkCal').value,
+    wkProtein: document.getElementById('wkProtein').value,
+    wkBudget: document.getElementById('wkBudget').value,
+    activeSlots: activeSlots.slice(),
+    variety: {
+      breakfast: document.getElementById('varBreakfast').value,
+      lunch: document.getElementById('varLunch').value,
+      dinner: document.getElementById('varDinner').value,
+      snack: document.getElementById('varSnack').value
+    },
+    savedAt: new Date().toISOString()
+  };
+}
+
+function applySavedPlanConfig(cfg){
+  state.goal = cfg.goal;
+  document.querySelectorAll('#seg-goal button').forEach(b=>b.classList.toggle('active', b.dataset.val===cfg.goal));
+  state.diet = (cfg.diet||[]).slice();
+  document.querySelectorAll('#chip-diet .chip').forEach(c=>c.classList.toggle('active', state.diet.includes(c.dataset.val)));
+  state.skill = cfg.skill;
+  document.querySelectorAll('#seg-skill button').forEach(b=>b.classList.toggle('active', b.dataset.val===cfg.skill));
+  state.pp = cfg.pp;
+  document.querySelectorAll('#seg-pp button').forEach(b=>b.classList.toggle('active', b.dataset.val===cfg.pp));
+  state.proteinPref = cfg.proteinPref;
+  document.getElementById('sel-protein').value = cfg.proteinPref;
+  state.carbPref = cfg.carbPref;
+  document.getElementById('sel-carb').value = cfg.carbPref;
+  document.getElementById('height').value = cfg.height||'';
+  document.getElementById('weight').value = cfg.weight||'';
+  document.getElementById('wkCal').value = cfg.wkCal||'';
+  document.getElementById('wkProtein').value = cfg.wkProtein||'';
+  document.getElementById('wkBudget').value = cfg.wkBudget||'';
+  activeSlots = (cfg.activeSlots||['breakfast','lunch','dinner','snack']).slice();
+  document.querySelectorAll('#chip-slots .chip').forEach(c=>c.classList.toggle('active', activeSlots.includes(c.dataset.val)));
+  if(cfg.variety){
+    document.getElementById('varBreakfast').value = cfg.variety.breakfast||1;
+    document.getElementById('varLunch').value = cfg.variety.lunch||3;
+    document.getElementById('varDinner').value = cfg.variety.dinner||3;
+    document.getElementById('varSnack').value = cfg.variety.snack||2;
+  }
+}
+
+async function savePlan(){
+  const nameInput = document.getElementById('savePlanName');
+  const name = nameInput.value.trim();
+  const msg = document.getElementById('savePlanMsg');
+  if(!currentUser){ msg.textContent = 'Sign in to save plans.'; return; }
+  if(!name){ msg.textContent = 'Give this plan a name first.'; return; }
+  if(!weekState.activeSlots.length){ msg.textContent = 'Build a week plan first.'; return; }
+  const config = snapshotCurrentPlanConfig();
+  const { error } = await supabaseClient.from('saved_plans').upsert(
+    { user_id: currentUser.id, name, config, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,name' }
+  );
+  if(error){ msg.textContent = error.message; return; }
+  savedPlans[name] = config;
+  nameInput.value = '';
+  msg.textContent = `Saved "${name}".`;
+  renderSavedPlansList();
+}
+
+async function loadPlan(name){
+  const cfg = savedPlans[name];
+  if(!cfg) return;
+  applySavedPlanConfig(cfg);
+  document.getElementById('weekPanel').style.display = 'block';
+  document.getElementById('savedPlansPanel').classList.remove('show');
+  document.getElementById('weekPanel').scrollIntoView({behavior:'smooth', block:'start'});
+  render();
+  buildWeek();
+}
+
+async function deletePlan(name){
+  if(!currentUser) return;
+  delete savedPlans[name];
+  await supabaseClient.from('saved_plans').delete().eq('user_id', currentUser.id).eq('name', name);
+  renderSavedPlansList();
+}
+
+function renderSavedPlansList(){
+  const panel = document.getElementById('savedPlansPanel');
+  const names = Object.keys(savedPlans);
+  document.getElementById('planCount').textContent = names.length;
+  if(!names.length){
+    panel.innerHTML = `<p class="hint">No saved plans yet — build a week below and save it once you're happy with it.</p>`;
+    return;
+  }
+  panel.innerHTML = names.map(name=>{
+    const cfg = savedPlans[name];
+    const d = cfg.savedAt ? new Date(cfg.savedAt) : null;
+    return `<div class="saved-plan-row">
+      <div><strong>${name}</strong><span class="hint" style="display:block;">${cfg.wkCal||'—'} kcal · ${cfg.wkProtein||'—'}g protein/day${d?(' · saved '+d.toLocaleDateString()):''}</span></div>
+      <div>
+        <button class="btn secondary small" onclick="loadPlan('${esc(name)}')" type="button">Load</button>
+        <button class="btn secondary small" onclick="deletePlan('${esc(name)}')" type="button">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('savePlanBtn').addEventListener('click', savePlan);
+
+/* ---------- Filter / scoring wiring ---------- */
+document.querySelectorAll('#seg-goal button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#seg-goal button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); state.goal=b.dataset.val; render();
+}));
+document.querySelectorAll('#seg-meal button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#seg-meal button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); state.meal=b.dataset.val; render();
+}));
+document.querySelectorAll('#seg-skill button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#seg-skill button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); state.skill=b.dataset.val; render();
+}));
+document.querySelectorAll('#seg-pp button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#seg-pp button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); state.pp=b.dataset.val; render();
+}));
+document.querySelectorAll('#chip-diet .chip').forEach(c=>c.addEventListener('click',()=>{
+  c.classList.toggle('active');
+  const v=c.dataset.val;
+  if(state.diet.includes(v)) state.diet=state.diet.filter(x=>x!==v);
+  else state.diet.push(v);
+  render();
+}));
+document.getElementById('favOnlyChip').addEventListener('click', function(){
+  this.classList.toggle('active');
+  state.favOnly = this.classList.contains('active');
+  render();
+});
+document.getElementById('sel-protein').addEventListener('change', e=>{ state.proteinPref = e.target.value; render(); });
+document.getElementById('sel-carb').addEventListener('change', e=>{ state.carbPref = e.target.value; render(); });
+document.getElementById('recipeSearch').addEventListener('input', render);
+
+function bmi(h,w){ if(!h||!w) return null; const m=h/100; return (w/(m*m)).toFixed(1); }
+
+function renderLabel(cal,protein,h,w,budget){
+  const b = bmi(h,w);
+  return `
+  <div class="label-card">
+    <div class="title">Your Target</div>
+    <div class="servline"><span>Meal type</span><span>${state.meal}</span></div>
+    <div class="servline"><span>Phase</span><span>${state.goal}</span></div>
+    <div class="label-row thick"><span>Calories</span><span class="num">${cal||'—'} kcal</span></div>
+    <div class="label-row"><span>Protein</span><span class="num">${protein||'—'} g</span></div>
+    <div class="label-row"><span>Budget</span><span class="num">${budget?('£'+budget.toFixed(2)):'no limit set'}</span></div>
+    <div class="label-row"><span>Skill</span><span class="num">${state.skill}</span></div>
+    <div class="label-row"><span>Protein powder</span><span class="num">${state.pp==='no'?'not allowed':state.pp==='only'?'preferred':'no preference'}</span></div>
+    <div class="label-row"><span>Protein source</span><span class="num">${state.proteinPref}</span></div>
+    <div class="label-row"><span>Carb source</span><span class="num">${state.carbPref}</span></div>
+    <div class="label-row"><span>Diet tags</span><span class="num">${state.diet.length?state.diet.join(', '):'none'}</span></div>
+    ${b?`<div class="label-row"><span>BMI (reference)</span><span class="num">${b}</span></div>`:''}
+    <div class="label-foot">BMI is a general reference only. In deficit, matches lean toward higher protein-per-calorie recipes; in surplus, toward more energy-dense ones — both still ranked primarily on closeness to your calorie and protein targets.</div>
+  </div>`;
+}
+
+function passesFilters(r, opts){
+  opts = opts || {};
+  if(state.diet.length && !state.diet.every(d=>r.diet.includes(d))) return false;
+  if(state.skill!=='any' && r.skill!==state.skill) return false;
+  if(state.pp==='no' && r.pp) return false;
+  if(state.pp==='only' && !r.pp) return false;
+  if(state.proteinPref!=='any' && r.proteinSource!==state.proteinPref) return false;
+  if(state.carbPref!=='any' && r.carbSource!==state.carbPref) return false;
+  if(!opts.skipFav && state.favOnly && !favourites.includes(r.name)) return false;
+  return true;
+}
+
+function matchesSearch(r, query){
+  if(!query) return true;
+  const q = query.toLowerCase();
+  if(r.name.toLowerCase().includes(q)) return true;
+  return r.ing.some(([ing])=>ing.toLowerCase().includes(q));
+}
+
+function scoreRecipe(r, cal, protein){
+  let score = 0;
+  if(cal) score += Math.abs(r.cal - cal);
+  if(protein) score += Math.abs(r.protein - protein) * 4;
+  return score;
+}
+
+function phaseAdjustedScore(r, cal, protein){
+  let score = scoreRecipe(r, cal, protein);
+  const density = r.cal > 0 ? r.protein / r.cal : 0;
+  if(state.goal === 'deficit') score -= density * 300;
+  else if(state.goal === 'surplus') score -= r.cal / 20;
+  return score;
+}
+
+function estimateDailyTargets(weightKg, goal){
+  if(!weightKg || weightKg<=0) return null;
+  const maintenance = weightKg * 30;
+  let calories, proteinPerKg;
+  if(goal==='deficit'){ calories = maintenance*0.8; proteinPerKg = 2.0; }
+  else if(goal==='surplus'){ calories = maintenance*1.15; proteinPerKg = 1.6; }
+  else { calories = maintenance; proteinPerKg = 1.8; }
+  return { calories: Math.round(calories/10)*10, protein: Math.round(weightKg*proteinPerKg) };
+}
+
+document.getElementById('suggestBtn').addEventListener('click', ()=>{
+  const w = parseFloat(document.getElementById('weight').value);
+  const daily = estimateDailyTargets(w, state.goal);
+  const msg = document.getElementById('suggestMsg');
+  if(!daily){ msg.textContent = 'Enter your weight above first.'; return; }
+  const prop = SLOT_PROPORTIONS[state.meal];
+  document.getElementById('cal').value = Math.round(daily.calories*prop);
+  document.getElementById('protein').value = Math.round(daily.protein*prop);
+  msg.textContent = `Estimated from ${w}kg, ${state.goal} (≈${daily.calories} kcal / ${daily.protein}g protein daily — a rough guide, adjust to your own results).`;
+  render();
+});
+document.getElementById('wkSuggestBtn').addEventListener('click', ()=>{
+  const w = parseFloat(document.getElementById('weight').value);
+  const daily = estimateDailyTargets(w, state.goal);
+  const msg = document.getElementById('wkSuggestMsg');
+  if(!daily){ msg.textContent = 'Enter your weight in the section above first.'; return; }
+  document.getElementById('wkCal').value = daily.calories;
+  document.getElementById('wkProtein').value = daily.protein;
+  msg.textContent = `Estimated from ${w}kg, ${state.goal} phase — a rough guide, adjust to your own results.`;
+});
+
+function storeLinks(ing){
+  return {
+    tesco: `https://www.tesco.com/groceries/en-GB/search?query=${encodeURIComponent(ing)}`,
+    sains: `https://www.sainsburys.co.uk/gol-ui/SearchResults/${encodeURIComponent(ing)}`,
+    asda: `https://groceries.asda.com/search/${encodeURIComponent(ing)}`,
+    aldi: `https://www.aldi.co.uk/search?text=${encodeURIComponent(ing)}`,
+    lidl: `https://www.lidl.co.uk/search?query=${encodeURIComponent(ing)}`
+  };
+}
+
+function cardHTML(r, cal, protein, overBudgetNote){
+  cardCounter++;
+  const cid = 'recipe-panel-' + cardCounter;
+  const ingLinks = r.ing.map(([ing,qty])=>{
+    const s = storeLinks(ing);
+    return `<div class="ing-row"><strong>${qty} ${ing}</strong>
+      <span class="store-links">
+      <a href="${s.tesco}" target="_blank">Tesco</a>
+      <a href="${s.sains}" target="_blank">Sainsbury's</a>
+      <a href="${s.asda}" target="_blank">Asda</a>
+      <a href="${s.aldi}" target="_blank">Aldi</a>
+      <a href="${s.lidl}" target="_blank">Lidl</a></span></div>`;
+  }).join('');
+
+  let note = '';
+  if(cal && protein){
+    const dCal = r.cal - cal, dPro = r.protein - protein;
+    note = `${dCal>=0?'+':''}${dCal} kcal · ${dPro>=0?'+':''}${dPro}g protein vs target`;
+  }
+  if(overBudgetNote) note += (note?' · ':'') + overBudgetNote;
+
+  const videoLink = r.video
+    ? `<a href="${r.video}" target="_blank">▶ Watch video</a>`
+    : `<span class="no-video" title="No video for this one — the full written recipe is included below">Full recipe — no video</span>`;
+
+  const ingredientListHTML = r.ing.map(([ing,qty])=>`<li>${qty} ${ing}</li>`).join('');
+  const stepsHTML = r.steps.map(s=>`<li>${s}</li>`).join('');
+  const isFav = favourites.includes(r.name);
+  const prepTag = r.mealPrepFriendly ? `<span class="tag">🧊 Meal-prep friendly</span>` : '';
+
+  return `
+  <div class="card">
+    <div class="card-hero">
+      <img class="card-photo" src="${foodImg(r)}" alt="${r.name}" loading="lazy">
+      <span class="meal-badge">${r.meal}</span>
+      <span class="price-badge">£${r.price.toFixed(2)}</span>
+      <span class="skill-badge">${r.skill}</span>
+      <button class="fav-btn ${isFav?'active':''}" onclick="toggleFavourite('${esc(r.name)}')" title="Save to favourites" type="button">${isFav?'♥':'♡'}</button>
+    </div>
+    <div class="card-top">
+      <p class="card-name">${r.name}</p>
+      <div class="tag-row">${r.diet.map(d=>`<span class="tag">${d}</span>`).join('')}${r.pp?`<span class="tag pp">uses protein powder</span>`:''}${prepTag}</div>
+    </div>
+    <div class="macros">
+      <div class="macro"><span class="n">${r.cal}</span><span class="l">kcal</span></div>
+      <div class="macro"><span class="n">${r.protein}g</span><span class="l">protein</span></div>
+      <div class="macro"><span class="n">£${r.price.toFixed(2)}</span><span class="l">est. cost</span></div>
+    </div>
+    ${note?`<div class="match-note">${note}</div>`:''}
+    <div class="ingredients">${ingLinks}</div>
+    <div class="recipe-panel" id="${cid}">
+      <h4>Ingredients</h4>
+      <ul>${ingredientListHTML}</ul>
+      <h4>Method</h4>
+      <ol>${stepsHTML}</ol>
+      <h4>🧊 Meal prep</h4>
+      <p style="margin:0;color:var(--muted);">${r.mealPrepTip || 'No meal-prep notes for this one yet.'}</p>
+    </div>
+    <div class="card-links">
+      ${videoLink}
+      <button onclick="document.getElementById('${cid}').classList.toggle('open')" type="button">View recipe</button>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const h = parseFloat(document.getElementById('height').value);
+  const w = parseFloat(document.getElementById('weight').value);
+  const cal = parseFloat(document.getElementById('cal').value);
+  const protein = parseFloat(document.getElementById('protein').value);
+  const budget = parseFloat(document.getElementById('budget').value);
+  const searchQ = document.getElementById('recipeSearch').value.trim();
+  const statusEl = document.getElementById('searchStatus');
+
+  // Fix 7: search feedback
+  if(searchQ){
+    statusEl.textContent = '🔍 Searching…';
+    setTimeout(()=>{ statusEl.textContent = ''; }, 600);
+  } else {
+    statusEl.textContent = '';
+  }
+
+  document.getElementById('labelWrap').innerHTML = renderLabel(cal, protein, h, w, budget);
+
+  let pool = RECIPES.filter(r=>r.meal===state.meal && passesFilters(r) && matchesSearch(r, searchQ));
+
+  // Fix 1: portion scaling — scale recipe macros/price to match calorie target
+  const scaledPool = pool.map(r=>{
+    if(!cal || r.cal <= 0) return {...r, scaleFactor:1};
+    const factor = Math.min(Math.max(cal / r.cal, 0.5), 3.0);
+    const roundF = (n) => Math.round(n * factor);
+    return {
+      ...r,
+      cal: roundF(r.cal),
+      protein: roundF(r.protein),
+      price: parseFloat((r.price * factor).toFixed(2)),
+      scaleFactor: factor,
+      scaleNote: factor !== 1 ? `Portions ${factor > 1 ? 'scaled up' : 'scaled down'} ${Math.round(factor*100)}% to match your calorie target` : null
+    };
+  });
+
+  let withinBudget = budget ? scaledPool.filter(r=>r.price<=budget) : scaledPool;
+  let usedFallback = false;
+  if(budget && withinBudget.length < 3){ withinBudget = scaledPool; usedFallback = true; }
+
+  let matches = withinBudget.map(r=>({...r, score:phaseAdjustedScore(r,cal,protein)}));
+  matches.sort((a,b)=>a.score-b.score);
+  matches = matches.slice(0,6);
+
+  document.getElementById('resCount').textContent = matches.length + ' result' + (matches.length!==1?'s':'');
+  const resDiv = document.getElementById('results');
+
+  if(!matches.length){
+    resDiv.innerHTML = `<div class="empty">No recipes match. Try dropping a dietary tag, skill level, ingredient preference, budget cap, or search term.</div>`;
+    return;
+  }
+
+  // Fix 3: budget tip
+  let budgetTip = '';
+  if(budget && matches.some(r=>r.price > budget)){
+    const cheapest = [...matches].sort((a,b)=>a.price-b.price).slice(0,2).map(r=>r.name).join(' or ');
+    budgetTip = `<div style="background:rgba(143,174,93,0.1);border:1px solid rgba(143,174,93,0.3);border-radius:3px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--herb);">
+      💡 <strong>To stay within budget:</strong> try ${cheapest}. You can also reduce portion size by lowering your calorie target slightly, or swap expensive protein sources (salmon, lamb) for cheaper ones (chicken, eggs, lentils).
+    </div>`;
+  }
+
+  const cardsHTML = matches.map(r=>{
+    let overNote = '';
+    if(budget && r.price > budget) overNote = `over your £${budget.toFixed(2)} budget`;
+    if(r.scaleNote) overNote = (overNote ? overNote + ' · ' : '') + r.scaleNote;
+    return cardHTML(r, cal, protein, overNote);
+  }).join('');
+
+  resDiv.innerHTML = budgetTip + `<div class="cards">${cardsHTML}</div>` + (usedFallback ? `<p class="hint" style="margin-top:10px;">Nothing matched within budget, so budget was relaxed for these results.</p>` : '');
+}
+
+document.getElementById('findBtn').addEventListener('click', ()=>{
+  const statusEl = document.getElementById('searchStatus');
+  const btn = document.getElementById('findBtn');
+  btn.textContent = 'Searching…';
+  statusEl.textContent = '🔍 Searching recipes…';
+  setTimeout(()=>{
+    render();
+    btn.textContent = 'Find my recipes →';
+    const count = document.getElementById('resCount').textContent;
+    statusEl.textContent = `✓ Search complete — ${count}`;
+    document.querySelector('.results-head').scrollIntoView({behavior:'smooth', block:'start'});
+    setTimeout(()=>{ statusEl.textContent = ''; }, 3000);
+  }, 300);
+});
+['height','weight','cal','protein','budget'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', render);
+});
+
+/* ---------- Weekly plan: build, swap, shopping list, progress, search ---------- */
+document.getElementById('weekYes').addEventListener('click', ()=>{
+  document.getElementById('weekPanel').style.display = 'block';
+  document.getElementById('weekPanel').scrollIntoView({behavior:'smooth', block:'start'});
+});
+document.getElementById('weekNo').addEventListener('click', ()=>{
+  document.getElementById('weekPanel').style.display = 'none';
+});
+document.querySelectorAll('#chip-slots .chip').forEach(c=>c.addEventListener('click',()=>{
+  c.classList.toggle('active');
+  const v=c.dataset.val;
+  if(activeSlots.includes(v)) activeSlots = activeSlots.filter(x=>x!==v);
+  else activeSlots.push(v);
+}));
+
+function getVarietyCount(slot){
+  const id = 'var' + slot.charAt(0).toUpperCase() + slot.slice(1);
+  const el = document.getElementById(id);
+  const v = el ? parseInt(el.value) : 7;
+  return (v && v>=1) ? Math.min(v,7) : 7;
+}
+
+function buildWeek(){
+  const dailyCal = parseFloat(document.getElementById('wkCal').value);
+  const dailyProtein = parseFloat(document.getElementById('wkProtein').value);
+  const weeklyBudget = parseFloat(document.getElementById('wkBudget').value);
+  const weekResultsDiv = document.getElementById('weekResults');
+
+  if(!dailyCal || !dailyProtein || !activeSlots.length){
+    weekResultsDiv.innerHTML = `<div class="empty">Enter a daily calorie and protein goal, and pick at least one meal slot.</div>`;
+    return;
+  }
+
+  const totalProp = activeSlots.reduce((s,slot)=>s+SLOT_PROPORTIONS[slot],0);
+  const candidatesBySlot = {};
+  activeSlots.forEach(slot=>{
+    const targetCal = dailyCal * (SLOT_PROPORTIONS[slot]/totalProp);
+    const targetProtein = dailyProtein * (SLOT_PROPORTIONS[slot]/totalProp);
+    let pool = RECIPES.filter(r=>r.meal===slot && passesFilters(r, {skipFav:true}));
+    pool = pool.map(r=>({...r, score:phaseAdjustedScore(r,targetCal,targetProtein)}));
+    pool.sort((a,b)=>a.score-b.score);
+    candidatesBySlot[slot] = { list: pool.slice(0,8), targetCal, targetProtein };
+  });
+
+  const planIndex = {};
+  DAYS.forEach((day,di)=>{
+    planIndex[di] = {};
+    activeSlots.forEach(slot=>{
+      const fullLen = candidatesBySlot[slot].list.length;
+      const variety = fullLen ? Math.min(getVarietyCount(slot), fullLen) : 1;
+      planIndex[di][slot] = fullLen ? (di % variety) : 0;
+    });
+  });
+
+  weekState = { candidatesBySlot, planIndex, activeSlots: activeSlots.slice(), weeklyBudget };
+  renderWeekUI();
+}
+
+function weekSwap(di, slot){
+  const list = weekState.candidatesBySlot[slot].list;
+  if(!list.length) return;
+  weekState.planIndex[di][slot] = (weekState.planIndex[di][slot] + 1) % list.length;
+  renderWeekUI();
+}
+
+function categorize(name){
+  const n = name.toLowerCase();
+  const protein = ['chicken','beef','lamb','turkey','salmon','cod','prawn','shrimp','tofu','paneer','egg','tuna','jerky','sausage','yogurt','yoghurt','cottage cheese','skyr','whey','protein powder','halloumi'];
+  const dairy = ['cheese','milk','cream'];
+  const carb = ['rice','pasta','noodle','bread','oats','wrap','tortilla','potato','quinoa','bagel','rice cake','couscous','panko','spaghetti'];
+  const produce = ['spinach','tomato','onion','garlic','pepper','courgette','broccoli','cucumber','avocado','banana','berries','lemon','lime','kale','mushroom','carrot','celery','apple','asparagus','sweet potato','coriander','basil','thyme','rosemary','green beans'];
+  if(protein.some(k=>n.includes(k))) return 'Protein';
+  if(dairy.some(k=>n.includes(k))) return 'Dairy & alternatives';
+  if(carb.some(k=>n.includes(k))) return 'Carbs & bakery';
+  if(produce.some(k=>n.includes(k))) return 'Fruit & veg';
+  return 'Pantry & extras';
+}
+
+function parseQty(qtyStr){
+  const m = String(qtyStr).match(/^([\d.]+)\s*([a-zA-Z]*)/);
+  if(!m) return null;
+  const amount = parseFloat(m[1]);
+  if(isNaN(amount)) return null;
+  return { amount, unit: (m[2]||'').toLowerCase() };
+}
+
+function buildShoppingListHTML(planMatrix, slots, weeklyCost){
+  const map = {};
+  planMatrix.forEach((dayPlan)=>{
+    slots.forEach(slot=>{
+      const r = dayPlan[slot];
+      if(!r) return;
+      r.ing.forEach(([name, qty])=>{
+        const key = name.toLowerCase();
+        if(!map[key]) map[key] = { display:name, entries:[], category:categorize(name) };
+        map[key].entries.push({ qty });
+      });
+    });
+  });
+
+  const cats = {};
+  Object.values(map).forEach(item=>{
+    if(!cats[item.category]) cats[item.category]=[];
+    cats[item.category].push(item);
+  });
+
+  const catOrder = ['Protein','Carbs & bakery','Fruit & veg','Dairy & alternatives','Pantry & extras'];
+  let sections = '';
+  catOrder.forEach(cat=>{
+    if(!cats[cat] || !cats[cat].length) return;
+    const items = cats[cat].sort((a,b)=>a.display.localeCompare(b.display)).map(item=>{
+      const byUnit = {};
+      const unparsedCounts = {};
+      item.entries.forEach(e=>{
+        const p = parseQty(e.qty);
+        if(p){ byUnit[p.unit] = (byUnit[p.unit]||0) + p.amount; }
+        else { unparsedCounts[e.qty] = (unparsedCounts[e.qty]||0) + 1; }
+      });
+      const totalParts = Object.entries(byUnit).map(([unit,amt])=> `${parseFloat(amt.toFixed(2))}${unit?(' '+unit):'x'}`);
+      Object.entries(unparsedCounts).forEach(([qty,count])=>{
+        totalParts.push(count > 1 ? `${qty} ×${count}` : qty);
+      });
+      const totalStr = totalParts.join(' + ');
+      const s = storeLinks(item.display);
+      return `<div class="shop-item">
+        <div><strong style="color:var(--paper);">${item.display}</strong><span class="qty">${totalStr}</span></div>
+        <div class="links"><a href="${s.tesco}" target="_blank">Tesco</a><a href="${s.sains}" target="_blank">Sainsbury's</a><a href="${s.asda}" target="_blank">Asda</a><a href="${s.aldi}" target="_blank">Aldi</a><a href="${s.lidl}" target="_blank">Lidl</a></div>
+      </div>`;
+    }).join('');
+    sections += `<div class="shop-cat"><h4>${cat}</h4>${items}</div>`;
+  });
+
+  return `
+  <div class="shop-list">
+    <div class="results-head" style="margin-top:36px;">
+      <h2>Shopping list</h2>
+      <span class="results-count">£${weeklyCost.toFixed(2)} total</span>
+    </div>
+    <p class="hint" style="margin-bottom:16px;">Quantities are combined across the week where units match (grams with grams, etc.); mixed units are listed side by side rather than guessed at.</p>
+    ${sections}
+  </div>`;
+}
+
+function renderProgressHTML(){
+  const doneCount = DAYS.filter(d=>progress[d]).length;
+  const days = DAYS.map(d=>`
+    <label class="progress-day">
+      <input type="checkbox" ${progress[d]?'checked':''} onchange="toggleProgress('${d}', this.checked)">
+      ${d.slice(0,3)}
+    </label>`).join('');
+  return `
+  <div class="progress-block">
+    <div class="results-head" style="margin:0 0 4px;border:none;padding:0;">
+      <h2 style="font-size:20px;">This week's cooking checklist</h2>
+      <span class="results-count">${doneCount}/7 days</span>
+    </div>
+    <p class="hint">Tick off each day you cook from the plan. <a href="#" onclick="resetProgress();return false;" style="color:var(--herb);">Reset for a new week</a></p>
+    <div class="progress-days">${days}</div>
+  </div>`;
+}
+
+function getRecipesInCurrentPlan(){
+  const ws = weekState;
+  if(!ws.activeSlots || !ws.activeSlots.length) return [];
+  const seen = new Set();
+  const list = [];
+  DAYS.forEach((day, di)=>{
+    ws.activeSlots.forEach(slot=>{
+      const cands = ws.candidatesBySlot[slot] ? ws.candidatesBySlot[slot].list : [];
+      if(!cands.length) return;
+      const r = cands[ws.planIndex[di][slot]];
+      if(r && !seen.has(r.name)){
+        seen.add(r.name);
+        list.push(r);
+      }
+    });
+  });
+  return list;
+}
+
+function applyPlanSearchHighlight(){
+  const q = planSearchQuery.trim().toLowerCase();
+  document.querySelectorAll('td.slot-cell[data-di]').forEach(td=>{
+    const nameEl = td.querySelector('.rname');
+    const name = nameEl ? nameEl.textContent.toLowerCase() : '';
+    td.classList.toggle('search-hit', !!q && name.includes(q));
+  });
+  const resultsDiv = document.getElementById('planSearchResults');
+  const matchesDiv = document.getElementById('planSearchMatches');
+  if(!resultsDiv) return;
+  if(!q){ resultsDiv.textContent=''; if(matchesDiv) matchesDiv.innerHTML=''; return; }
+  const hitCells = document.querySelectorAll('td.slot-cell.search-hit');
+  if(!hitCells.length){
+    resultsDiv.textContent = "Not in this week's plan.";
+    if(matchesDiv) matchesDiv.innerHTML = '';
+    return;
+  }
+  const labels = Array.from(hitCells).map(td=>`${DAYS[parseInt(td.dataset.di)]} ${td.dataset.slot}`);
+  resultsDiv.textContent = `Found in: ${labels.join(', ')}`;
+
+  if(matchesDiv){
+    const matchingRecipes = getRecipesInCurrentPlan().filter(r=>r.name.toLowerCase().includes(q));
+    if(matchingRecipes.length){
+      const cardsHTML = matchingRecipes.map(r=>{
+        const slotTargets = weekState.candidatesBySlot[r.meal];
+        const targetCal = slotTargets ? Math.round(slotTargets.targetCal) : null;
+        const targetProtein = slotTargets ? Math.round(slotTargets.targetProtein) : null;
+        return cardHTML(r, targetCal, targetProtein, '');
+      }).join('');
+      matchesDiv.innerHTML = `
+        <div class="results-head" style="margin-top:24px;">
+          <h2 style="font-size:20px;">From your plan</h2>
+          <span class="results-count">${matchingRecipes.length} result${matchingRecipes.length!==1?'s':''}</span>
+        </div>
+        <div class="cards">${cardsHTML}</div>`;
+    } else {
+      matchesDiv.innerHTML = '';
+    }
+  }
+}
+document.getElementById('planSearch').addEventListener('input', function(){
+  planSearchQuery = this.value;
+  applyPlanSearchHighlight();
+});
+
+function renderWeekUI(){
+  const ws = weekState;
+  if(!ws.activeSlots || !ws.activeSlots.length) return;
+
+  let weeklyCost = 0;
+  let rows = '';
+  let dayTotals = [];
+  let planMatrix = [];
+
+  DAYS.forEach((day, di)=>{
+    let rowCal=0, rowProtein=0, rowCost=0;
+    let cells = '';
+    let dayPlan = {};
+    ws.activeSlots.forEach(slot=>{
+      const cands = ws.candidatesBySlot[slot].list;
+      if(!cands.length){
+        cells += `<td class="slot-cell" data-di="${di}" data-slot="${slot}">—</td>`;
+        dayPlan[slot] = null;
+        return;
+      }
+      const idx = ws.planIndex[di][slot];
+      const r = cands[idx];
+      dayPlan[slot] = r;
+      rowCal+=r.cal; rowProtein+=r.protein; rowCost+=r.price;
+      const swapBtn = cands.length>1 ? `<button class="swap-btn" onclick="weekSwap(${di},'${slot}')" title="Swap for another close match" type="button">⟳ swap</button>` : '';
+      cells += `<td class="slot-cell" data-di="${di}" data-slot="${slot}"><span class="rname">${r.name}</span><span class="rmacro">${r.cal}kcal · ${r.protein}g · £${r.price.toFixed(2)}</span>${swapBtn}</td>`;
+    });
+    planMatrix.push(dayPlan);
+    weeklyCost += rowCost;
+    dayTotals.push({cal:rowCal, protein:rowProtein, cost:rowCost});
+    rows += `<tr><td class="day">${day}</td>${cells}<td class="slot-cell"><span class="rname">${rowCal} kcal</span><span class="rmacro">${rowProtein}g protein · £${rowCost.toFixed(2)}</span></td></tr>`;
+  });
+
+  const overBudget = ws.weeklyBudget && weeklyCost > ws.weeklyBudget;
+
+  // Budget suggestions: find the specific swaps that would save the most money
+  let budgetSuggestHTML = '';
+  if(overBudget){
+    const overspend = weeklyCost - ws.weeklyBudget;
+    const swapIdeas = [];
+    DAYS.forEach((day, di)=>{
+      ws.activeSlots.forEach(slot=>{
+        const cands = ws.candidatesBySlot[slot].list;
+        if(cands.length < 2) return;
+        const current = cands[ws.planIndex[di][slot]];
+        const cheapest = [...cands].sort((a,b)=>a.price-b.price)[0];
+        const saving = current.price - cheapest.price;
+        if(saving > 0.3){
+          swapIdeas.push({ day, slot, from: current.name, fromPrice: current.price, to: cheapest.name, toPrice: cheapest.price, saving });
+        }
+      });
+    });
+    swapIdeas.sort((a,b)=>b.saving-a.saving);
+    const topSwaps = swapIdeas.slice(0,3);
+    const totalPossible = swapIdeas.reduce((s,x)=>s+x.saving,0);
+
+    if(topSwaps.length){
+      const swapLines = topSwaps.map(s=>
+        `<li>${s.day} ${s.slot}: swap <strong>${s.from}</strong> (£${s.fromPrice.toFixed(2)}) for <strong>${s.to}</strong> (£${s.toPrice.toFixed(2)}) — saves £${s.saving.toFixed(2)}</li>`
+      ).join('');
+      budgetSuggestHTML = `
+      <div style="background:rgba(143,174,93,0.1);border:1px solid rgba(143,174,93,0.35);border-radius:4px;padding:16px 18px;margin-top:18px;font-size:13px;color:var(--paper);">
+        <p style="margin:0 0 8px;font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--herb);">💡 You're £${overspend.toFixed(2)} over budget — here's how to fix it</p>
+        <ul style="margin:0 0 8px;padding-left:18px;line-height:1.7;">${swapLines}</ul>
+        <p class="hint" style="margin:0;">Use the ⟳ swap button on those meals to make the change (keep pressing until the cheaper recipe appears). Across the whole week there's up to £${totalPossible.toFixed(2)} of savings available through swaps. Cheaper protein sources (chicken, eggs, lentils, beans) generally cost less than salmon, lamb or prawns.</p>
+      </div>`;
+    } else {
+      budgetSuggestHTML = `
+      <div style="background:rgba(143,174,93,0.1);border:1px solid rgba(143,174,93,0.35);border-radius:4px;padding:16px 18px;margin-top:18px;font-size:13px;color:var(--paper);">
+        <p style="margin:0;color:var(--herb);">💡 You're £${overspend.toFixed(2)} over budget, and these are already the cheapest matching recipes. Try relaxing a dietary filter or ingredient preference to unlock cheaper options, or reduce your calorie target slightly for smaller, cheaper portions.</p>
+      </div>`;
+    }
+  }
+
+  const header = `<tr><th>Day</th>${ws.activeSlots.map(s=>`<th>${s}</th>`).join('')}<th>Daily total</th></tr>`;
+  const shopHTML = buildShoppingListHTML(planMatrix, ws.activeSlots, weeklyCost);
+  const progressHTML = renderProgressHTML();
+
+  document.getElementById('weekResults').innerHTML = `
+    <div class="week-table-wrap">
+      <table class="week">
+        <thead>${header}</thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="week-summary">
+      <div><span class="n">£${weeklyCost.toFixed(2)}</span>Estimated weekly cost</div>
+      ${ws.weeklyBudget ? `<div><span class="n ${overBudget?'over':''}">${overBudget? '+£'+(weeklyCost-ws.weeklyBudget).toFixed(2)+' over' : '£'+(ws.weeklyBudget-weeklyCost).toFixed(2)+' under'}</span>vs your £${ws.weeklyBudget.toFixed(2)} budget</div>` : ''}
+      <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.cal,0)/7)}</span>Avg daily kcal</div>
+      <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.protein,0)/7)}g</span>Avg daily protein</div>
+    </div>
+    ${budgetSuggestHTML}
+    <p class="hint" style="margin-top:14px;">Hit ⟳ swap on any meal to cycle to another close macro match — diet, skill, protein-powder and ingredient settings stay respected.</p>
+    ${shopHTML}
+    ${progressHTML}
+  `;
+
+  applyPlanSearchHighlight();
+}
+
+document.getElementById('buildWeekBtn').addEventListener('click', buildWeek);
+
+/* ---------- Init ---------- */
+document.getElementById('results').innerHTML = '<div class="empty">Loading recipes…</div>';
+(async function init(){
+  RECIPES = await loadRecipesFromDB();
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  currentUser = session ? session.user : null;
+  updateAuthUI();
+  favourites = currentUser ? await loadFavourites() : [];
+  progress = currentUser ? await loadProgress() : {};
+  savedPlans = currentUser ? await loadSavedPlans() : {};
+  renderSavedPlansList();
+  render();
+})();
+</script>
+</body>
+</html>

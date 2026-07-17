@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — Macro Mastery</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Work+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap');
+:root{
+  --ink:#141412; --cream:#F4EFE1; --card:#FFFDF6; --card-alt:#F6F1E2;
+  --orange:#E8551D; --orange-deep:#C4440F; --gold:#D9B44A;
+  --line:#DED5BC; --line-strong:#C9BFA4; --muted:#6E695C;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:'Work Sans',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
+.inner{max-width:1000px;margin:0 auto;padding:0 28px;}
+
+.site-head{position:sticky;top:0;z-index:100;background:var(--cream);border-bottom:1px solid var(--ink);}
+.head-inner{max-width:1220px;margin:0 auto;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.nav-logo{font-family:'Anton',sans-serif;font-size:22px;letter-spacing:.02em;color:var(--ink);text-decoration:none;white-space:nowrap;}
+.nav-logo b{color:var(--orange);font-weight:400;}
+.nav-logo i{font-family:'Oswald',sans-serif;font-style:normal;font-size:11px;letter-spacing:.14em;color:var(--muted);margin-left:4px;vertical-align:2px;}
+.nav-links{display:flex;gap:28px;flex-wrap:wrap;}
+.nav-links a{color:var(--ink);text-decoration:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:4px 0;border-bottom:2px solid transparent;}
+.nav-links a:hover, .nav-links a.here{border-bottom-color:var(--orange);color:var(--orange);}
+
+.page-hero{padding:72px 0 56px;}
+.eyebrow{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--orange-deep);margin:0 0 18px;}
+.eyebrow::before{content:'— ';}
+h1{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(48px,6.5vw,84px);line-height:.98;text-transform:uppercase;letter-spacing:.005em;margin:0 0 20px;}
+h1 em{font-family:'Instrument Serif',serif;font-style:italic;text-transform:none;font-size:.95em;}
+.lead{font-size:18px;color:#403B2E;margin:0;max-width:640px;line-height:1.7;}
+
+h2{font-family:'Anton',sans-serif;font-weight:400;font-size:30px;text-transform:uppercase;letter-spacing:.02em;margin:56px 0 16px;}
+p{line-height:1.75;color:#3F3B2F;margin:0 0 16px;font-size:15.5px;max-width:720px;}
+a{color:var(--orange-deep);}
+
+.card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin:28px 0 8px;}
+.card{background:var(--card);border:1.5px solid var(--ink);border-radius:8px;padding:26px 28px;}
+.card .num{font-family:'Anton',sans-serif;font-size:30px;color:var(--orange);display:block;margin-bottom:12px;}
+.card h3{font-family:'Work Sans',sans-serif;font-weight:700;font-size:17px;margin:0 0 8px;}
+.card p{margin:0;font-size:14px;color:#5B5546;}
+
+.cta-band{background:var(--ink);color:var(--cream);border-radius:8px;padding:34px 38px;margin:60px 0 0;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.cta-band p{margin:0;font-family:'Anton',sans-serif;font-size:26px;text-transform:uppercase;color:var(--cream);line-height:1.1;}
+.cta-band a{background:var(--orange);color:#FFF6ED;text-decoration:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding:15px 32px;border-radius:999px;}
+.cta-band a:hover{background:var(--orange-deep);}
+
+.site-foot{background:var(--ink);color:var(--cream);padding:56px 0 40px;margin-top:90px;}
+.foot-grid{display:flex;justify-content:space-between;align-items:flex-start;gap:32px;flex-wrap:wrap;}
+.foot-logo{font-family:'Anton',sans-serif;font-size:38px;line-height:1;margin:0 0 10px;}
+.foot-tag{color:#A9A28E;font-size:14px;margin:0;}
+.foot-links{display:flex;flex-direction:column;gap:12px;}
+.foot-links a{color:var(--cream);text-decoration:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.16em;text-transform:uppercase;}
+.foot-links a:hover{color:var(--orange);}
+.foot-bottom{margin-top:44px;padding-top:22px;border-top:1px solid #33312B;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#8B8471;}
+
+@media(max-width:700px){
+  .card-grid{grid-template-columns:1fr;}
+  .cta-band{flex-direction:column;align-items:flex-start;}
+  .inner{padding:0 18px;}
+}
+</style>
+</head>
+<body>
+
+<header class="site-head">
+  <div class="head-inner">
+    <a class="nav-logo" href="/">MACRO <b>MASTERY</b><i>/UK</i></a>
+    <nav class="nav-links">
+      <a href="/#planner">Planner</a>
+      <a href="/#matches">Recipes</a>
+      <a href="/#how">How it works</a>
+      <a href="/about.html" class="here">About</a>
+    </nav>
+  </div>
+</header>
+
+<section class="page-hero">
+  <div class="inner">
+    <p class="eyebrow">Who we are</p>
+    <h1>Built for goals.<br><em>Not for guesswork.</em></h1>
+    <p class="lead">We built Macro Mastery because planning meals that actually hit your goals — while staying within budget, fitting your diet, and not eating the same thing every day — was harder than it needed to be.</p>
+  </div>
+</section>
+
+<div class="inner">
+  <h2>What we do</h2>
+  <p>Macro Mastery is a weekly meal planner built around your macros, not the other way round. Tell us your calorie and protein targets, your dietary requirements, what you like to eat and what you can spend — and we'll build your week, generate a consolidated shopping list, and give you full recipes with instructions.</p>
+  <p>Every recipe comes with meal-prep guidance, store links for Tesco, Sainsbury's, Asda, Aldi and Lidl, and a video where one's available. The weekly plan tells you exactly what to cook, what to buy and how much it'll cost.</p>
+
+  <h2>What makes us different</h2>
+  <div class="card-grid">
+    <div class="card">
+      <span class="num">01</span>
+      <h3>Built around your budget</h3>
+      <p>Set a weekly budget and the planner stays within it. If you're over, it tells you exactly which meals to swap and how much you'll save — not just that you're over.</p>
+    </div>
+    <div class="card">
+      <span class="num">02</span>
+      <h3>Actually personalised</h3>
+      <p>Deficit, maintenance or surplus. Halal, vegan, gluten-free, dairy-free. Beginner or advanced cook. Chicken or tofu. Rice or pasta. The plan adapts to your life, not a generic template.</p>
+    </div>
+    <div class="card">
+      <span class="num">03</span>
+      <h3>82+ recipes and growing</h3>
+      <p>We add new recipes every month across all meal types — breakfast, lunch, dinner, snacks and shakes — with full written instructions and meal-prep tips on every single one.</p>
+    </div>
+    <div class="card">
+      <span class="num">04</span>
+      <h3>Portion scaling</h3>
+      <p>Recipes automatically scale to your calorie target, so whether you're eating 1600 kcal or 3500 kcal, the portions and macros adjust rather than showing you a fixed recipe that doesn't fit.</p>
+    </div>
+  </div>
+
+  <h2>Who we are</h2>
+  <p>We're the Macro Mastery team — a small group who care about making fitness nutrition genuinely accessible. We're not dietitians or personal trainers, and nothing on this site is medical advice — but we do understand the frustration of trying to eat well, hit your numbers and not spend a fortune, and we've tried to build something that actually solves that.</p>
+  <p>Questions or feedback? We'd love to hear from you at <a href="mailto:macromastery@outlook.com">macromastery@outlook.com</a>.</p>
+
+  <div class="cta-band">
+    <p>Ready to plan<br>your week?</p>
+    <a href="/#planner">Start the planner →</a>
+  </div>
+</div>
+
+<footer class="site-foot">
+  <div class="inner">
+    <div class="foot-grid">
+      <div>
+        <p class="foot-logo">MACRO MASTERY</p>
+        <p class="foot-tag">Eat for your goals. Without the spreadsheet.</p>
+      </div>
+      <div class="foot-links">
+        <a href="/about.html">About</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="mailto:macromastery@outlook.com">macromastery@outlook.com</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Macro Mastery</span>
+      <span>Made in the UK</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
