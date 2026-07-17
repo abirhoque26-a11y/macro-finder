@@ -791,30 +791,111 @@ supabaseClient.auth.onAuthStateChange(async (event, session)=>{
 });
 
 /* ---------- Recipe photography ----------
-   Curated food photography (Unsplash CDN, free to hotlink) keyed by the recipe's
-   icon type from the database. Each recipe picks deterministically from its set,
-   so the same recipe always shows the same photo. To use your own images, just
-   swap the photo IDs or full URLs below. */
-const FOOD_IMG = {
-  bowl:    ['photo-1546069901-ba9599a7e63c','photo-1512621776951-a57141f2eefd','photo-1467003909585-2f8a72700288'],
-  pan:     ['photo-1512058564366-18510be2db19','photo-1585937421612-70a008356fbe'],
-  wrap:    ['photo-1565299507177-b0ac66763828','photo-1626700051175-6818013e1d4f'],
-  oats:    ['photo-1517673400267-0251440c45dc'],
-  toast:   ['photo-1541519227354-08fa5d50c44d','photo-1525351484163-7529414344d8'],
-  pancake: ['photo-1567620905732-2d1ec7ab7445','photo-1528207776546-365bb710ee93'],
-  shake:   ['photo-1505252585461-04db1eb84625','photo-1553530666-ba11a7da3888'],
-  plate:   ['photo-1504674900247-0877df9cc836','photo-1532550907401-a500c9a57435','photo-1546833999-b9f581a1996d'],
-  salad:   ['photo-1540420773420-3366772f4999','photo-1512621776951-a57141f2eefd'],
-  soup:    ['photo-1547592180-85f173990554'],
-  skewer:  ['photo-1555939594-58d7cb561ad1','photo-1519708227418-c8fd9a32b7a2'],
-  snack:   ['photo-1488477181946-6428a0291777','photo-1490474418585-ba9bad8fd0ea']
+   Every recipe in the database gets a hand-picked photo of the actual dish (or the
+   closest real equivalent). Sources: TheMealDB (photographed named dishes) and
+   Unsplash (visually verified). To change a photo, just swap the URL for that
+   recipe name. Unknown/future recipes fall back to a per-meal-type photo. */
+const mdb = id => `https://www.themealdb.com/images/media/meals/${id}.jpg`;
+const usp = id => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=70`;
+const RECIPE_IMG = {
+  /* breakfast */
+  'Almond Butter Chia Pudding':          usp('photo-1488477181946-6428a0291777'),
+  'Greek Yogurt Protein Bowl':           usp('photo-1490474418585-ba9bad8fd0ea'),
+  'Bircher Muesli':                      usp('photo-1517673400267-0251440c45dc'),
+  'Bulking Peanut Butter Oats':          usp('photo-1614961233913-a5113a4a34ed'),
+  'Overnight Oats with Peanut Butter':   usp('photo-1571748982800-fa51082c2224'),
+  'Shakshuka':                           mdb('g373701551450225'),
+  'Turkey & Spinach Breakfast Hash':     usp('photo-1510693206972-df098062cb71'),
+  'Vegan Tofu Scramble':                 mdb('rwvw8q1765660071'),
+  'Veggie Omelette':                     mdb('yvpuuy1511797244'),
+  'Cottage Cheese Pancakes':             mdb('rwuyqx1511383174'),
+  'Protein Pancakes':                    mdb('sywswr1511383814'),
+  'Full English Breakfast':              mdb('sqrtwu1511721265'),
+  'Vegan Protein Smoothie Bowl':         usp('photo-1505252585461-04db1eb84625'),
+  'Peanut Butter Banana Protein Toast':  usp('photo-1484723091739-30a097e8f929'),
+  'Smoked Salmon Bagel':                 usp('photo-1592767049184-0fda840ae4e7'),
+  'Breakfast Burrito':                   usp('photo-1626700051175-6818013e1d4f'),
+  'Chicken Sausage & Egg Wrap':          mdb('swo87v1763595282'),
+  /* lunch */
+  'Beef Burrito Bowl':                   usp('photo-1543352634-99a5d50ae78e'),
+  'Chicken Pesto Pasta':                 usp('photo-1473093295043-cdd812d0e601'),
+  'Chicken Shawarma Bowl':               mdb('qxytrx1511304021'),
+  'Egg Fried Rice with Prawns':          mdb('hblwvg1763478203'),
+  'Mediterranean Couscous Salad':        mdb('02s6gc1763799560'),
+  'Tuna Pasta Salad':                    mdb('wvqpwt1468339226'),
+  'Vegan Chickpea Buddha Bowl':          usp('photo-1512621776951-a57141f2eefd'),
+  'Vegan Protein Pasta Salad':           usp('photo-1621996346565-e3dbc646d9a9'),
+  'Jacket Potato with Beans & Cheese':   "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Baked_Beans_%26_Mature_Cheddar_Jacket_-_Jonny%27s_2026-06-12.jpg/960px-Baked_Beans_%26_Mature_Cheddar_Jacket_-_Jonny%27s_2026-06-12.jpg",
+  'Falafel Salad':                       mdb('u5e9qq1763795441'),
+  'Halloumi & Roast Veg Salad':          usp('photo-1540420773420-3366772f4999'),
+  'Prawn & Quinoa Salad':                mdb('k29viq1585565980'),
+  'Tuna Nicoise Salad':                  mdb('yypwwq1511304979'),
+  'Lentil Dahl with Rice':               mdb('wuxrtu1483564410'),
+  'Chicken Caesar Wrap':                 mdb('hcg6l91763596970'),
+  'Massive Chicken Wrap':                mdb('kcv6hj1598733479'),
+  'Turkey & Avocado Wrap':               usp('photo-1628191010210-a59de33e5941'),
+  /* dinner */
+  'Bulking Beef & Pasta Bake':           mdb('wtsvxx1511296896'),
+  'Mass Builder Chicken Rice Bowl':      usp('photo-1609183480237-ccbb2d7c5772'),
+  'Spaghetti Bolognese':                 mdb('sutysw1468247559'),
+  'Turkey Meatballs with Pasta':         usp('photo-1622973536968-3ead9e780960'),
+  'Vegan Mushroom Risotto':              usp('photo-1476124369491-e7addf5db371'),
+  'Beef Stir Fry':                       mdb('kyuxew1763479470'),
+  'Chicken Fajitas':                     usp('photo-1599974579688-8dbdd335c77f'),
+  'Vegan Protein Stir Fry':              mdb('minfsc1763766806'),
+  'Baked Salmon with Quinoa':            mdb('1548772327'),
+  'Chicken Katsu Curry':                 mdb('vwrpps1503068729'),
+  'Cod & Sweet Potato Traybake':         usp('photo-1519708227418-c8fd9a32b7a2'),
+  'High-Calorie Salmon & Rice':          usp('photo-1467003909585-2f8a72700288'),
+  'Salmon Teriyaki with Rice':           mdb('xxyupu1468262513'),
+  'Grilled Lamb Chops with Veg':         usp('photo-1603360946369-dc9bb6258143'),
+  'Beef Chilli Con Carne':               mdb('uuqvwu1504629254'),
+  'Chicken Tikka Masala':                usp('photo-1565557623262-b51c2513a641'),
+  'Paneer Tikka Masala':                 mdb('xxpqsy1511452222'),
+  'Vegan Black Bean Chilli':             mdb('wqurxy1511453156'),
+  'Sweet Potato & Black Bean Tacos':     usp('photo-1565299585323-38d6b0865b47'),
+  /* shakes */
+  'Banana Honey Milk Shake':             usp('photo-1505252585461-04db1eb84625'),
+  'Berry & Oat Smoothie':                usp('photo-1553530666-ba11a7da3888'),
+  'Chocolate Peanut Butter Protein Shake': usp('photo-1572490122747-3968b75cc699'),
+  'Coffee Protein Shake':                usp('photo-1517701604599-bb29b565090c'),
+  'Green Protein Shake':                 usp('photo-1610970881699-44a5587cabec'),
+  'Mango & Coconut Shake':               usp('photo-1623065422902-30a2d299bbe4'),
+  'Mass Gainer Shake':                   usp('photo-1553787499-6f9133860278'),
+  'Peanut Butter Banana Shake':          usp('photo-1505252585461-04db1eb84625'),
+  'Post-Workout Recovery Shake':         usp('photo-1553787499-6f9133860278'),
+  'Protein Shake & Banana':              usp('photo-1572490122747-3968b75cc699'),
+  'Strawberry Banana Milkshake':         usp('photo-1579954115545-a95591f28bfc'),
+  'Strawberry Protein Shake':            usp('photo-1579954115545-a95591f28bfc'),
+  'Tropical Vegan Shake':                usp('photo-1546173159-315724a31696'),
+  'Vegan Berry Protein Shake':           usp('photo-1553530666-ba11a7da3888'),
+  /* snacks */
+  'Cottage Cheese & Berries':            usp('photo-1488477181946-6428a0291777'),
+  'Greek Yogurt Protein Dip with Fruit': usp('photo-1564093497595-593b96d80180'),
+  'Skyr with Honey & Nuts':              usp('photo-1614961233913-a5113a4a34ed'),
+  'Apple with Peanut Butter':            usp('photo-1568702846914-96b305d2aaeb'),
+  'Beef Jerky & Apple':                  "https://upload.wikimedia.org/wikipedia/commons/1/1f/Beef-jerky.jpg",
+  'Boiled Eggs & Nuts':                  usp('photo-1482049016688-2d3e1b311543'),
+  'Edamame with Sea Salt':               "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Edamame_by_Augapfel.jpg/960px-Edamame_by_Augapfel.jpg",
+  'Homemade Protein Bar':                usp('photo-1622484212850-eb596d769edc'),
+  'Hummus & Veggie Sticks':              usp('photo-1546039907-7fa05f864c02'),
+  'Protein Muffin':                      usp('photo-1607958996333-41aef7caefaa'),
+  'Rice Cakes with Almond Butter':       usp('photo-1484723091739-30a097e8f929'),
+  'Roasted Chickpeas':                   mdb('vgsipt1779917593'),
+  'Trail Mix':                           usp('photo-1615485500704-8e990f9900f7'),
+  'Turkey Roll-Ups':                     "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Ham_%26_Pickle_Rolls_%282141566594%29.jpg/960px-Ham_%26_Pickle_Rolls_%282141566594%29.jpg",
+  'Vegan Protein Balls':                 usp('photo-1599599810769-bcde5a160d32')
 };
-const MEAL_FALLBACK = { breakfast:'toast', lunch:'bowl', dinner:'plate', snack:'snack', shake:'shake' };
+/* fallback for any recipe added later that isn't in the map yet */
+const MEAL_FALLBACK_IMG = {
+  breakfast: usp('photo-1517673400267-0251440c45dc'),
+  lunch:     usp('photo-1512621776951-a57141f2eefd'),
+  dinner:    usp('photo-1504674900247-0877df9cc836'),
+  snack:     usp('photo-1490474418585-ba9bad8fd0ea'),
+  shake:     usp('photo-1553530666-ba11a7da3888')
+};
 function foodImg(r){
-  const list = FOOD_IMG[r.icon] || FOOD_IMG[MEAL_FALLBACK[r.meal]] || FOOD_IMG.plate;
-  let h = 0;
-  for(const c of String(r.name)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return `https://images.unsplash.com/${list[h % list.length]}?auto=format&fit=crop&w=900&q=70`;
+  return RECIPE_IMG[r.name] || MEAL_FALLBACK_IMG[r.meal] || MEAL_FALLBACK_IMG.dinner;
 }
 
 /* ---------- Recipe data (64 recipes — full instructions always included; video is a bonus, not a requirement) ---------- */
