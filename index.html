@@ -86,8 +86,21 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .cta-orange:hover{background:var(--orange-deep);}
 .micro{font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
 .hero-photo{position:relative;}
-.hero-photo img{width:100%;height:540px;object-fit:cover;display:block;border-radius:6px;}
+.hero-photo{cursor:pointer;}
+.hero-photo:focus-visible{outline:2.5px solid var(--orange);outline-offset:3px;border-radius:6px;}
+.hero-photo img{width:100%;height:540px;object-fit:cover;display:block;border-radius:6px;transition:opacity .45s ease;}
+.hero-hint{position:absolute;top:14px;right:14px;background:rgba(20,20,18,.78);color:var(--cream);font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;padding:6px 13px;border-radius:999px;}
 .hero-card{position:absolute;left:22px;right:22px;bottom:22px;background:var(--card);border-radius:5px;padding:15px 18px;box-shadow:0 12px 34px rgba(20,20,18,.22);}
+
+/* recipe modal (expanded hero recipe) */
+.recipe-modal{position:fixed;inset:0;background:rgba(20,20,18,.62);display:none;align-items:flex-start;justify-content:center;z-index:300;padding:44px 16px;overflow-y:auto;}
+.recipe-modal.open{display:flex;}
+.recipe-modal-inner{max-width:440px;width:100%;position:relative;margin-bottom:44px;}
+.recipe-modal-close{position:absolute;top:-16px;right:-10px;z-index:2;background:var(--cream);border:2px solid var(--ink);color:var(--ink);width:38px;height:38px;border-radius:999px;font-size:15px;cursor:pointer;line-height:1;}
+.recipe-modal-close:hover{background:var(--orange);border-color:var(--orange);color:#FFF6ED;}
+
+/* auto budget swap note */
+.autoswap-note{background:rgba(78,107,36,.12);border:1.5px solid var(--herb);color:var(--herb);border-radius:6px;padding:13px 17px;margin-top:16px;font-size:13px;font-weight:600;}
 .hero-card .hc-top{display:flex;justify-content:space-between;font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
 .hero-card .hc-top .kcal{color:var(--orange);font-weight:600;}
 .hero-card p{margin:0 0 6px;font-weight:600;font-size:16px;color:var(--ink);}
@@ -419,7 +432,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
   <div class="profile-edit-row" id="authRow">
     <div class="auth-card">
       <h4>Sign in or create a free account</h4>
-      <p class="hint">Save your plans, favourites and cooking checklist. New here? Enter an email and password and hit <strong>Create account</strong> — it takes a few seconds. Next time, use <strong>Sign in</strong> with the same details.</p>
+      <p class="hint">Save your plans, favourites and cooking checklist — plus your goal, weight, targets and preferences are remembered automatically, so you never re-enter them. New here? Enter an email and password and hit <strong>Create account</strong> — it takes a few seconds. Next time, use <strong>Sign in</strong> with the same details.</p>
       <div class="auth-fields">
         <input type="email" id="authEmail" placeholder="Your email address">
         <input type="password" id="authPassword" placeholder="Password (6+ characters)">
@@ -452,16 +465,25 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
         <span class="micro">Free · No spreadsheet · 60 seconds</span>
       </div>
     </div>
-    <div class="hero-photo">
-      <img src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1000&q=75" alt="Fresh whole ingredients laid out on a table">
+    <div class="hero-photo" id="heroPhoto" role="button" tabindex="0" title="View this recipe"
+         onclick="openHeroRecipe()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openHeroRecipe();}">
+      <img id="heroImg" src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1000&q=75" alt="Fresh whole ingredients laid out on a table">
+      <span class="hero-hint" id="heroHint" style="display:none;">Tap for recipe ↗</span>
       <div class="hero-card">
-        <div class="hc-top"><span>Today · Lunch</span><span class="kcal">642 kcal</span></div>
-        <p>Grilled chicken, sweet potato, quinoa</p>
-        <span class="hc-macros">P·48&nbsp;&nbsp;&nbsp;C·62&nbsp;&nbsp;&nbsp;F·18</span>
+        <div class="hc-top"><span id="heroSlot">Today · Lunch</span><span class="kcal" id="heroKcal">642 kcal</span></div>
+        <p id="heroName">Grilled chicken, sweet potato, quinoa</p>
+        <span class="hc-macros" id="heroMacros">P·48&nbsp;&nbsp;&nbsp;C·62&nbsp;&nbsp;&nbsp;F·18</span>
       </div>
     </div>
   </div>
 </section>
+
+<div class="recipe-modal" id="recipeModal" onclick="if(event.target===this)closeRecipeModal()">
+  <div class="recipe-modal-inner">
+    <button class="recipe-modal-close" onclick="closeRecipeModal()" type="button" aria-label="Close">✕</button>
+    <div id="recipeModalBody"></div>
+  </div>
+</div>
 
 <section class="stats-sec">
   <div class="inner">
@@ -902,6 +924,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session)=>{
   progress = currentUser ? await loadProgress() : {};
   savedPlans = currentUser ? await loadSavedPlans() : {};
   renderSavedPlansList();
+  if(currentUser) restoreProfileOnce();
   render();
 });
 
@@ -1067,6 +1090,130 @@ document.getElementById('quickBuildBtn').addEventListener('click', ()=>{
 // Quick is the default — beginners shouldn't need to know what a "surplus" is
 // before they can get a plan. Advanced is one click away.
 setPlanMode('quick');
+
+/* ---------- Hero recipe rotation + expandable recipe modal ---------- */
+let heroRotation = { list: [], idx: 0, timer: null };
+
+function applyHeroRecipe(r){
+  const m = estimateMacros(r);
+  const img = document.getElementById('heroImg');
+  img.src = foodImg(r);
+  img.alt = r.name;
+  document.getElementById('heroSlot').textContent = 'From the pantry · ' + r.meal;
+  document.getElementById('heroKcal').textContent = r.cal + ' kcal';
+  document.getElementById('heroName').textContent = r.name;
+  document.getElementById('heroMacros').innerHTML = `P·${r.protein}&nbsp;&nbsp;&nbsp;C·${m.carbs}&nbsp;&nbsp;&nbsp;F·${m.fat}`;
+}
+
+function startHeroRotation(){
+  if(!RECIPES.length) return;
+  heroRotation.list = [...RECIPES].sort(()=>Math.random()-0.5).slice(0,10);
+  heroRotation.idx = 0;
+  applyHeroRecipe(heroRotation.list[0]);
+  document.getElementById('heroHint').style.display = 'inline-block';
+  heroRotation.timer = setInterval(()=>{
+    const nextIdx = (heroRotation.idx + 1) % heroRotation.list.length;
+    const r = heroRotation.list[nextIdx];
+    const preload = new Image();
+    preload.onload = preload.onerror = ()=>{
+      const img = document.getElementById('heroImg');
+      img.style.opacity = 0;
+      setTimeout(()=>{
+        heroRotation.idx = nextIdx;
+        applyHeroRecipe(r);
+        img.style.opacity = 1;
+      }, 450);
+    };
+    preload.src = foodImg(r);
+  }, 4500);
+}
+
+function openHeroRecipe(){
+  const r = heroRotation.list[heroRotation.idx];
+  if(!r) return;
+  const body = document.getElementById('recipeModalBody');
+  body.innerHTML = cardHTML(r, null, null, '');
+  // open the full recipe + ingredients by default inside the modal
+  body.querySelectorAll('.recipe-panel, .ingredients').forEach(el=>el.classList.add('open'));
+  body.querySelectorAll('.ing-toggle').forEach(el=>el.classList.add('open'));
+  document.getElementById('recipeModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeRecipeModal(){
+  document.getElementById('recipeModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeRecipeModal(); });
+
+/* ---------- Profile persistence ----------
+   Signed-in users get their goal, measurements, targets, preferences and
+   supermarket saved automatically (stored as a reserved "__profile" row in the
+   saved_plans table, protected by the same Row Level Security). Guests get the
+   same via localStorage on this device. */
+const PROFILE_KEY = '__profile';
+let profileApplied = false;
+let profileSaveTimer = null;
+
+function collectProfile(){
+  return {
+    goal: state.goal, diet: state.diet.slice(), skill: state.skill, pp: state.pp,
+    proteinPref: state.proteinPref, carbPref: state.carbPref,
+    height: document.getElementById('height').value,
+    weight: document.getElementById('weight').value,
+    cal: document.getElementById('cal').value,
+    protein: document.getElementById('protein').value,
+    budget: document.getElementById('budget').value,
+    wkCal: document.getElementById('wkCal').value,
+    wkProtein: document.getElementById('wkProtein').value,
+    wkBudget: document.getElementById('wkBudget').value,
+    activeSlots: activeSlots.slice(),
+    preferredStore
+  };
+}
+
+function saveProfileSoon(){
+  clearTimeout(profileSaveTimer);
+  profileSaveTimer = setTimeout(async ()=>{
+    const p = collectProfile();
+    localStorage.setItem('mm_profile', JSON.stringify(p));
+    if(currentUser){
+      await supabaseClient.from('saved_plans').upsert(
+        { user_id: currentUser.id, name: PROFILE_KEY, config: p, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,name' }
+      );
+    }
+  }, 1500);
+}
+
+function applyProfile(p){
+  if(!p) return;
+  try{
+    if(p.goal){ state.goal = p.goal; document.querySelectorAll('#seg-goal button').forEach(b=>b.classList.toggle('active', b.dataset.val===p.goal)); }
+    state.diet = (p.diet||[]).slice();
+    document.querySelectorAll('#chip-diet .chip').forEach(c=>c.classList.toggle('active', state.diet.includes(c.dataset.val)));
+    if(p.skill){ state.skill = p.skill; document.querySelectorAll('#seg-skill button').forEach(b=>b.classList.toggle('active', b.dataset.val===p.skill)); }
+    if(p.pp){ state.pp = p.pp; document.querySelectorAll('#seg-pp button').forEach(b=>b.classList.toggle('active', b.dataset.val===p.pp)); }
+    if(p.proteinPref){ state.proteinPref = p.proteinPref; document.getElementById('sel-protein').value = p.proteinPref; }
+    if(p.carbPref){ state.carbPref = p.carbPref; document.getElementById('sel-carb').value = p.carbPref; }
+    ['height','weight','cal','protein','budget','wkCal','wkProtein','wkBudget'].forEach(id=>{
+      if(p[id]) document.getElementById(id).value = p[id];
+    });
+    if(Array.isArray(p.activeSlots) && p.activeSlots.length){
+      activeSlots = p.activeSlots.slice();
+      document.querySelectorAll('#chip-slots .chip').forEach(c=>c.classList.toggle('active', activeSlots.includes(c.dataset.val)));
+    }
+    if(p.preferredStore){ preferredStore = p.preferredStore; localStorage.setItem('mm_store', preferredStore); }
+  }catch(e){ console.error('applyProfile', e); }
+}
+
+function restoreProfileOnce(){
+  if(profileApplied) return;
+  const remote = currentUser ? savedPlans[PROFILE_KEY] : null;
+  let local = null;
+  try{ local = JSON.parse(localStorage.getItem('mm_profile') || 'null'); }catch(e){}
+  const p = remote || local;
+  if(p){ applyProfile(p); profileApplied = true; }
+}
 
 let RECIPES = [];
 
@@ -1270,7 +1417,7 @@ async function deletePlan(name){
 function renderSavedPlansList(){
   const panel = document.getElementById('savedPlansPanel');
   const countHint = document.getElementById('planCountHint');
-  const names = Object.keys(savedPlans);
+  const names = Object.keys(savedPlans).filter(n=>!n.startsWith('__'));
   document.getElementById('planCount').textContent = names.length;
 
   if(!currentUser){
@@ -1453,8 +1600,8 @@ function storeLinks(ing){
     tesco: `https://www.tesco.com/groceries/en-GB/search?query=${encodeURIComponent(ing)}`,
     sains: `https://www.sainsburys.co.uk/gol-ui/SearchResults/${encodeURIComponent(ing)}`,
     asda: `https://groceries.asda.com/search/${encodeURIComponent(ing)}`,
-    aldi: `https://www.aldi.co.uk/search?text=${encodeURIComponent(ing)}`,
-    lidl: `https://www.lidl.co.uk/search?query=${encodeURIComponent(ing)}`
+    aldi: `https://www.aldi.co.uk/results?q=${encodeURIComponent(ing)}`,
+    lidl: `https://www.lidl.co.uk/q/search?q=${encodeURIComponent(ing)}`
   };
 }
 
@@ -1587,6 +1734,7 @@ function render(){
   resultsPage = 0;
   resultsCtx = { cal, protein, budget, usedFallback };
   renderResultsPage();
+  saveProfileSoon();
 }
 
 function renderResultsPage(){
@@ -1734,6 +1882,7 @@ function buildWeek(){
 
   weekState = { candidatesBySlot, planIndex, activeSlots: activeSlots.slice(), weeklyBudget };
   renderWeekUI();
+  saveProfileSoon();
 }
 
 function weekSwap(di, slot){
@@ -1741,6 +1890,48 @@ function weekSwap(di, slot){
   if(!list.length) return;
   weekState.planIndex[di][slot] = (weekState.planIndex[di][slot] + 1) % list.length;
   renderWeekUI();
+}
+
+/* One-click budget fix: applies the biggest money-saving swaps (largest first)
+   until the week is back within budget, instead of the user doing each by hand. */
+let autoSwapMsg = '';
+function applyBudgetSwaps(){
+  const ws = weekState;
+  if(!ws.weeklyBudget || !ws.activeSlots.length) return;
+  const weekCost = ()=>{
+    let c = 0;
+    DAYS.forEach((day,di)=>ws.activeSlots.forEach(slot=>{
+      const l = ws.candidatesBySlot[slot].list;
+      if(l.length) c += l[ws.planIndex[di][slot]].price;
+    }));
+    return c;
+  };
+  const ideas = [];
+  DAYS.forEach((day,di)=>ws.activeSlots.forEach(slot=>{
+    const cands = ws.candidatesBySlot[slot].list;
+    if(cands.length < 2) return;
+    const current = cands[ws.planIndex[di][slot]];
+    let bestIdx = ws.planIndex[di][slot], bestPrice = current.price;
+    cands.forEach((c,i)=>{ if(c.price < bestPrice){ bestPrice = c.price; bestIdx = i; } });
+    const saving = current.price - bestPrice;
+    if(saving > 0.01) ideas.push({ di, slot, bestIdx, saving });
+  }));
+  ideas.sort((a,b)=>b.saving-a.saving);
+  let applied = 0, saved = 0;
+  for(const idea of ideas){
+    if(weekCost() <= ws.weeklyBudget) break;
+    ws.planIndex[idea.di][idea.slot] = idea.bestIdx;
+    applied++; saved += idea.saving;
+  }
+  if(applied){
+    const stillOver = weekCost() > ws.weeklyBudget;
+    autoSwapMsg = `Applied ${applied} money-saving swap${applied!==1?'s':''} — saved £${saved.toFixed(2)}. ` +
+      (stillOver ? 'Still slightly over — these are now the cheapest recipes that match your filters.' : "You're now within budget. Swap any meal back if you preferred the original.");
+  } else {
+    autoSwapMsg = 'No cheaper swaps available within your current filters.';
+  }
+  renderWeekUI();
+  document.querySelector('.autoswap-note')?.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 function categorize(name){
@@ -1775,6 +1966,7 @@ const STORES = [
 function setPreferredStore(id){
   preferredStore = id;
   localStorage.setItem('mm_store', id);
+  saveProfileSoon();
   if(weekState.activeSlots.length) renderWeekUI();
 }
 
@@ -2061,7 +2253,8 @@ function renderWeekUI(){
       <div style="background:rgba(143,174,93,0.1);border:1px solid rgba(143,174,93,0.35);border-radius:4px;padding:16px 18px;margin-top:18px;font-size:13px;color:var(--paper);">
         <p style="margin:0 0 8px;font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--herb);">💡 You're £${overspend.toFixed(2)} over budget — here's how to fix it</p>
         <ul style="margin:0 0 8px;padding-left:18px;line-height:1.7;">${swapLines}</ul>
-        <p class="hint" style="margin:0;">Use the ⟳ swap button on those meals to make the change (keep pressing until the cheaper recipe appears). Across the whole week there's up to £${totalPossible.toFixed(2)} of savings available through swaps. Cheaper protein sources (chicken, eggs, lentils, beans) generally cost less than salmon, lamb or prawns.</p>
+        <button class="btn small" style="margin:4px 0 10px;" onclick="applyBudgetSwaps()" type="button">⚡ Apply all savings for me</button>
+        <p class="hint" style="margin:0;">Or use the ⟳ swap button on individual meals if you'd rather choose yourself. Across the whole week there's up to £${totalPossible.toFixed(2)} of savings available through swaps. Cheaper protein sources (chicken, eggs, lentils, beans) generally cost less than salmon, lamb or prawns.</p>
       </div>`;
     } else {
       budgetSuggestHTML = `
@@ -2098,11 +2291,13 @@ function renderWeekUI(){
       <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.cal,0)/7)}</span>Avg daily kcal</div>
       <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.protein,0)/7)}g</span>Avg daily protein</div>
     </div>
+    ${autoSwapMsg ? `<div class="autoswap-note">✓ ${autoSwapMsg}</div>` : ''}
     ${budgetSuggestHTML}
     <p class="hint" style="margin-top:14px;">Hit ⟳ swap on any meal to cycle to another close macro match — diet, skill, protein-powder and ingredient settings stay respected.</p>
     ${shopHTML}
     ${progressHTML}
   `;
+  autoSwapMsg = '';
 
   applyPlanSearchHighlight();
 }
@@ -2113,6 +2308,7 @@ document.getElementById('buildWeekBtn').addEventListener('click', buildWeek);
 document.getElementById('results').innerHTML = '<div class="empty">Loading recipes…</div>';
 (async function init(){
   RECIPES = await loadRecipesFromDB();
+  startHeroRotation();
   const { data: { session } } = await supabaseClient.auth.getSession();
   currentUser = session ? session.user : null;
   updateAuthUI();
@@ -2120,6 +2316,7 @@ document.getElementById('results').innerHTML = '<div class="empty">Loading recip
   progress = currentUser ? await loadProgress() : {};
   savedPlans = currentUser ? await loadSavedPlans() : {};
   renderSavedPlansList();
+  restoreProfileOnce();
   render();
 })();
 </script>
