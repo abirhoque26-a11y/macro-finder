@@ -187,6 +187,17 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .results-count{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);}
 .empty{border:1.5px dashed var(--line-strong);border-radius:6px;padding:44px 24px;text-align:center;color:var(--muted);}
 
+/* pagination */
+.pager{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:32px;}
+.pager-btn{background:var(--card);border:1.5px solid var(--ink);color:var(--ink);font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:9px 18px;border-radius:999px;cursor:pointer;}
+.pager-btn:hover:not(:disabled){background:var(--ink);color:var(--cream);}
+.pager-btn:disabled{opacity:.35;cursor:default;}
+.pager-nums{display:flex;align-items:center;gap:4px;}
+.pager-num{background:none;border:1.5px solid transparent;color:var(--muted);font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;width:32px;height:32px;border-radius:999px;cursor:pointer;}
+.pager-num:hover{border-color:var(--line-strong);color:var(--ink);}
+.pager-num.active{background:var(--orange);border-color:var(--orange);color:#FFF6ED;}
+.pager-ellipsis{color:var(--muted);font-family:'Oswald',sans-serif;font-size:12px;padding:0 2px;}
+
 /* recipe cards */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(295px,1fr));gap:24px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s ease, box-shadow .15s ease;}
@@ -210,7 +221,13 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .macro .l{font-size:7.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-top:2px;}
 .macro-note{padding:0 19px 4px;font-size:10.5px;color:var(--muted);font-style:italic;}
 .match-note{padding:0 19px 12px;font-size:12px;color:var(--orange-deep);font-weight:500;}
-.ingredients{padding:0 19px 15px;font-size:13px;color:#4B463A;line-height:1.55;}
+.ing-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;background:none;border:none;border-top:1px solid var(--line);padding:11px 19px;font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);cursor:pointer;text-align:left;}
+.ing-toggle:hover{background:var(--card-alt);}
+.ing-toggle-count{color:var(--muted);font-weight:500;font-size:10.5px;text-transform:none;letter-spacing:0;margin-right:auto;margin-left:8px;}
+.ing-toggle .chev{font-size:12px;color:var(--muted);transition:transform .18s ease;flex-shrink:0;}
+.ing-toggle.open .chev{transform:rotate(180deg);}
+.ingredients{display:none;padding:2px 19px 15px;font-size:13px;color:#4B463A;line-height:1.55;}
+.ingredients.open{display:block;}
 .ing-row{margin-bottom:8px;}
 .ing-row strong{color:var(--ink);font-weight:600;}
 .store-links{display:block;margin-top:1px;}
@@ -1362,7 +1379,12 @@ function cardHTML(r, cal, protein, overBudgetNote){
       <div class="macro"><span class="n">£${r.price.toFixed(2)}</span><span class="l">cost</span></div>
     </div>
     ${note?`<div class="match-note">${note}</div>`:''}
-    <div class="ingredients">${ingLinks}</div>
+    <button class="ing-toggle" type="button" onclick="document.getElementById('${cid}-ing').classList.toggle('open'); this.classList.toggle('open');">
+      <span>Ingredients &amp; where to buy</span>
+      <span class="ing-toggle-count">${r.ing.length} item${r.ing.length!==1?'s':''}</span>
+      <span class="chev" aria-hidden="true">▾</span>
+    </button>
+    <div class="ingredients" id="${cid}-ing">${ingLinks}</div>
     <div class="recipe-panel" id="${cid}">
       <h4>Ingredients</h4>
       <ul>${ingredientListHTML}</ul>
@@ -1377,6 +1399,15 @@ function cardHTML(r, cal, protein, overBudgetNote){
     </div>
   </div>`;
 }
+
+/* ---------- Results pagination ----------
+   All matching recipes are kept (no arbitrary cap) and split across pages so a
+   broad search (e.g. just "lunch") still surfaces every match, not just a
+   top-6 subset. ---------- */
+const RESULTS_PAGE_SIZE = 9;
+let currentMatches = [];
+let resultsPage = 0;
+let resultsCtx = { cal:null, protein:null, budget:null, usedFallback:false };
 
 function render(){
   const h = parseFloat(document.getElementById('height').value);
@@ -1420,33 +1451,82 @@ function render(){
 
   let matches = withinBudget.map(r=>({...r, score:phaseAdjustedScore(r,cal,protein)}));
   matches.sort((a,b)=>a.score-b.score);
-  matches = matches.slice(0,6);
 
-  document.getElementById('resCount').textContent = matches.length + ' result' + (matches.length!==1?'s':'');
+  currentMatches = matches;
+  resultsPage = 0;
+  resultsCtx = { cal, protein, budget, usedFallback };
+  renderResultsPage();
+}
+
+function renderResultsPage(){
+  const { cal, protein, budget, usedFallback } = resultsCtx;
+  const total = currentMatches.length;
+  document.getElementById('resCount').textContent = total + ' result' + (total!==1?'s':'');
   const resDiv = document.getElementById('results');
 
-  if(!matches.length){
+  if(!total){
     resDiv.innerHTML = `<div class="empty">No recipes match. Try dropping a dietary tag, skill level, ingredient preference, budget cap, or search term.</div>`;
     return;
   }
 
-  // Fix 3: budget tip
+  const totalPages = Math.max(1, Math.ceil(total / RESULTS_PAGE_SIZE));
+  if(resultsPage >= totalPages) resultsPage = totalPages - 1;
+  if(resultsPage < 0) resultsPage = 0;
+  const start = resultsPage * RESULTS_PAGE_SIZE;
+  const pageItems = currentMatches.slice(start, start + RESULTS_PAGE_SIZE);
+
+  // Fix 3: budget tip — based on the full match set, not just the current page
   let budgetTip = '';
-  if(budget && matches.some(r=>r.price > budget)){
-    const cheapest = [...matches].sort((a,b)=>a.price-b.price).slice(0,2).map(r=>r.name).join(' or ');
+  if(budget && currentMatches.some(r=>r.price > budget)){
+    const cheapest = [...currentMatches].sort((a,b)=>a.price-b.price).slice(0,2).map(r=>r.name).join(' or ');
     budgetTip = `<div style="background:rgba(143,174,93,0.1);border:1px solid rgba(143,174,93,0.3);border-radius:3px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--herb);">
       💡 <strong>To stay within budget:</strong> try ${cheapest}. You can also reduce portion size by lowering your calorie target slightly, or swap expensive protein sources (salmon, lamb) for cheaper ones (chicken, eggs, lentils).
     </div>`;
   }
 
-  const cardsHTML = matches.map(r=>{
+  const cardsHTML = pageItems.map(r=>{
     let overNote = '';
     if(budget && r.price > budget) overNote = `over your £${budget.toFixed(2)} budget`;
     if(r.scaleNote) overNote = (overNote ? overNote + ' · ' : '') + r.scaleNote;
     return cardHTML(r, cal, protein, overNote);
   }).join('');
 
-  resDiv.innerHTML = budgetTip + `<div class="cards">${cardsHTML}</div>` + (usedFallback ? `<p class="hint" style="margin-top:10px;">Nothing matched within budget, so budget was relaxed for these results.</p>` : '');
+  const pagerHTML = buildPagerHTML(resultsPage, totalPages, total);
+
+  resDiv.innerHTML = budgetTip + `<div class="cards">${cardsHTML}</div>` + pagerHTML + (usedFallback ? `<p class="hint" style="margin-top:10px;">Nothing matched within budget, so budget was relaxed for these results.</p>` : '');
+}
+
+function buildPagerHTML(page, totalPages, total){
+  if(totalPages <= 1) return '';
+  const shown = Math.min(RESULTS_PAGE_SIZE, total - page*RESULTS_PAGE_SIZE);
+  const rangeStart = page*RESULTS_PAGE_SIZE + 1;
+  const rangeEnd = page*RESULTS_PAGE_SIZE + shown;
+
+  // build a compact page-number list: always show first, last, current +/-1, ellipsis elsewhere
+  const nums = [];
+  for(let i=0;i<totalPages;i++){
+    if(i===0 || i===totalPages-1 || Math.abs(i-page)<=1) nums.push(i);
+    else if(nums[nums.length-1] !== 'ellipsis') nums.push('ellipsis');
+  }
+  const numsHTML = nums.map(n=>
+    n==='ellipsis'
+      ? `<span class="pager-ellipsis">…</span>`
+      : `<button class="pager-num ${n===page?'active':''}" onclick="goToResultsPage(${n})" type="button">${n+1}</button>`
+  ).join('');
+
+  return `
+  <div class="pager">
+    <button class="pager-btn" onclick="goToResultsPage(${page-1})" type="button" ${page===0?'disabled':''}>← Prev</button>
+    <div class="pager-nums">${numsHTML}</div>
+    <button class="pager-btn" onclick="goToResultsPage(${page+1})" type="button" ${page===totalPages-1?'disabled':''}>Next →</button>
+  </div>
+  <p class="hint" style="text-align:center;margin-top:10px;">Showing ${rangeStart}–${rangeEnd} of ${total}</p>`;
+}
+
+function goToResultsPage(page){
+  resultsPage = page;
+  renderResultsPage();
+  document.querySelector('.results-head').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 document.getElementById('findBtn').addEventListener('click', ()=>{
