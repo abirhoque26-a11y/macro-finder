@@ -57,11 +57,14 @@ img{max-width:100%;}
 .auth-card .hint{margin:0 0 14px;}
 .auth-fields{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
 .auth-fields input{flex:1;min-width:210px;background:var(--card);border:1.5px solid var(--line-strong);color:var(--ink);padding:12px 14px;border-radius:4px;font-family:'Work Sans',sans-serif;font-size:14px;}
-.saved-plans-panel{display:none;background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:18px 22px;margin-top:16px;}
-.saved-plans-panel.show{display:block;}
+.plans-card{background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:24px 26px;margin-top:18px;scroll-margin-top:90px;}
+.plans-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px;flex-wrap:wrap;}
+.plans-card-head h4{margin:0;font-family:'Anton',sans-serif;font-size:20px;text-transform:uppercase;letter-spacing:.02em;}
 .saved-plan-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px;}
 .saved-plan-row:last-child{border-bottom:none;}
 .saved-plan-row strong{font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:.02em;}
+.plans-empty{padding:6px 0 2px;}
+.plans-flash{outline:2.5px solid var(--orange);outline-offset:3px;border-radius:6px;}
 
 /* ---------- Hero ---------- */
 .hero-sec{padding:64px 0 60px;}
@@ -195,9 +198,11 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px;}
 .tag{font-family:'Oswald',sans-serif;font-weight:600;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:transparent;color:var(--muted);border:1px solid var(--line-strong);}
 .tag.pp{background:rgba(217,180,74,.2);color:#8A6A14;border-color:var(--gold);}
-.macros{display:flex;gap:26px;padding:13px 19px;border-top:1px solid var(--line);font-family:'Oswald',sans-serif;}
-.macro .n{font-family:'Anton',sans-serif;font-size:23px;font-weight:400;color:var(--ink);display:block;line-height:1.1;}
-.macro .l{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;}
+.macros{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:13px 12px;border-top:1px solid var(--line);font-family:'Oswald',sans-serif;}
+.macro{text-align:center;min-width:0;}
+.macro .n{font-family:'Anton',sans-serif;font-size:16px;font-weight:400;color:var(--ink);display:block;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.macro .l{font-size:7.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-top:2px;}
+.macro-note{padding:0 19px 4px;font-size:10.5px;color:var(--muted);font-style:italic;}
 .match-note{padding:0 19px 12px;font-size:12px;color:var(--orange-deep);font-weight:500;}
 .ingredients{padding:0 19px 15px;font-size:13px;color:#4B463A;line-height:1.55;}
 .ing-row{margin-bottom:8px;}
@@ -336,7 +341,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
         <strong id="userEmailDisplay"></strong>
         <button class="pill-btn ghost" id="signOutBtn" type="button">Sign out</button>
       </div>
-      <button class="pill-btn ghost" id="viewPlansBtn" type="button" style="display:none;">My plans (<span id="planCount">0</span>)</button>
+      <button class="pill-btn ghost" id="viewPlansBtn" type="button">My plans (<span id="planCount">0</span>)</button>
     </div>
   </div>
 </header>
@@ -355,7 +360,13 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       <span class="hint" id="authMsg" style="display:block;margin-top:8px;"></span>
     </div>
   </div>
-  <div class="saved-plans-panel" id="savedPlansPanel"></div>
+  <div class="plans-card" id="myPlansSection">
+    <div class="plans-card-head">
+      <h4>My saved plans</h4>
+      <span class="hint" id="planCountHint"></span>
+    </div>
+    <div id="savedPlansPanel"><p class="hint plans-empty">Loading…</p></div>
+  </div>
 </div>
 
 <section class="hero-sec">
@@ -475,7 +486,6 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
           <div class="field form-full">
             <label>Dietary requirements <span class="badge optional">Optional</span></label>
             <div class="chips" id="chip-diet">
-              <div class="chip" data-val="halal">Halal</div>
               <div class="chip" data-val="vegetarian">Vegetarian</div>
               <div class="chip" data-val="vegan">Vegan</div>
               <div class="chip" data-val="gluten-free">Gluten-free</div>
@@ -674,7 +684,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     </div>
 
     <p class="foot-note">
-      Prices are rough per-serving estimates for UK supermarkets and vary by store and season. Where a matching video exists, "Watch video" links straight to it; where it doesn't, "View recipe" always gives full written instructions regardless. Ingredient links and the shopping list open live searches on Tesco, Sainsbury's, Asda, Aldi and Lidl. In a deficit, matches lean toward higher protein-per-calorie recipes; in a surplus, toward more energy-dense ones — both still ranked primarily by closeness to your calorie and protein targets. On accounts: sign-in uses real email/password authentication via Supabase — your favourites, cooking checklist and saved plans are stored in a real database under your account, and Row Level Security policies mean only you can read or write your own rows. Recipe photos are illustrative food photography, not photos of the exact finished dish.
+      Prices are rough per-serving estimates for UK supermarkets and vary by store and season. Calories and protein are set per recipe; carbs and fat are estimated from the remaining calories and the recipe's main carb source, so treat them as a close guide rather than a lab measurement. Where a matching video exists, "Watch video" links straight to it; where it doesn't, "View recipe" always gives full written instructions regardless. Ingredient links and the shopping list open live searches on Tesco, Sainsbury's, Asda, Aldi and Lidl. In a deficit, matches lean toward higher protein-per-calorie recipes; in a surplus, toward more energy-dense ones — both still ranked primarily by closeness to your calorie and protein targets. On accounts: sign-in uses real email/password authentication via Supabase — your favourites, cooking checklist and saved plans are stored in a real database under your account, and Row Level Security policies mean only you can read or write your own rows. Recipe photos are illustrative food photography, not photos of the exact finished dish.
     </p>
   </div>
 </section>
@@ -753,7 +763,6 @@ function updateAuthUI(){
   const signedIn = !!currentUser;
   document.getElementById('guestBar').style.display = signedIn ? 'none' : 'flex';
   document.getElementById('authedBar').style.display = signedIn ? 'flex' : 'none';
-  document.getElementById('viewPlansBtn').style.display = signedIn ? 'inline-block' : 'none';
   if(signedIn) document.getElementById('userEmailDisplay').textContent = currentUser.email;
 }
 document.getElementById('showAuthBtn').addEventListener('click', ()=>{
@@ -945,6 +954,7 @@ let state = { goal:"deficit", meal:"breakfast", diet:[], skill:"any", pp:"any", 
 let favourites = [];
 let progress = {};
 let savedPlans = {};
+let savedPlansError = null;
 let weekState = { candidatesBySlot:{}, planIndex:{}, activeSlots:[], weeklyBudget:0 };
 let activeSlots = ['breakfast','lunch','dinner','snack'];
 let cardCounter = 0;
@@ -975,7 +985,8 @@ async function loadProgress(){
 async function loadSavedPlans(){
   if(!currentUser) return {};
   const { data, error } = await supabaseClient.from('saved_plans').select('name, config').eq('user_id', currentUser.id);
-  if(error){ console.error(error); return {}; }
+  if(error){ console.error(error); savedPlansError = error.message; return {}; }
+  savedPlansError = null;
   const obj = {};
   data.forEach(row=>{ obj[row.name] = row.config; });
   return obj;
@@ -1011,7 +1022,7 @@ async function resetProgress(){
 
 /* ---------- Account bar wiring ---------- */
 document.getElementById('viewPlansBtn').addEventListener('click', ()=>{
-  document.getElementById('savedPlansPanel').classList.toggle('show');
+  document.getElementById('myPlansSection').scrollIntoView({behavior:'smooth', block:'start'});
 });
 
 function snapshotCurrentPlanConfig(){
@@ -1090,10 +1101,12 @@ async function loadPlan(name){
   if(!cfg) return;
   applySavedPlanConfig(cfg);
   document.getElementById('weekPanel').style.display = 'block';
-  document.getElementById('savedPlansPanel').classList.remove('show');
-  document.getElementById('weekPanel').scrollIntoView({behavior:'smooth', block:'start'});
   render();
   buildWeek();
+  const weekPanel = document.getElementById('weekPanel');
+  weekPanel.scrollIntoView({behavior:'smooth', block:'start'});
+  weekPanel.classList.add('plans-flash');
+  setTimeout(()=>weekPanel.classList.remove('plans-flash'), 1800);
 }
 
 async function deletePlan(name){
@@ -1105,10 +1118,23 @@ async function deletePlan(name){
 
 function renderSavedPlansList(){
   const panel = document.getElementById('savedPlansPanel');
+  const countHint = document.getElementById('planCountHint');
   const names = Object.keys(savedPlans);
   document.getElementById('planCount').textContent = names.length;
+
+  if(!currentUser){
+    countHint.textContent = '';
+    panel.innerHTML = `<p class="hint plans-empty">Sign in to save weekly plans and load them here anytime. <a href="#" onclick="document.getElementById('authRow').classList.add('show'); document.getElementById('showAuthBtn').scrollIntoView({behavior:'smooth', block:'center'}); return false;" style="color:var(--orange-deep);">Sign in or create a free account</a>.</p>`;
+    return;
+  }
+  if(savedPlansError){
+    countHint.textContent = '';
+    panel.innerHTML = `<p class="hint plans-empty">Couldn't load your saved plans: ${savedPlansError}. Try refreshing the page — email <a href="mailto:macromastery@outlook.com" style="color:var(--orange-deep);">macromastery@outlook.com</a> if this keeps happening.</p>`;
+    return;
+  }
+  countHint.textContent = names.length ? `${names.length} saved` : '';
   if(!names.length){
-    panel.innerHTML = `<p class="hint">No saved plans yet — build a week below and save it once you're happy with it.</p>`;
+    panel.innerHTML = `<p class="hint plans-empty">No saved plans yet — build a week below, then hit "Save this plan" to keep it here.</p>`;
     return;
   }
   panel.innerHTML = names.map(name=>{
@@ -1215,6 +1241,22 @@ function phaseAdjustedScore(r, cal, protein){
   return score;
 }
 
+/* ---------- Carb/fat estimate ----------
+   The database only stores calories and protein, so carbs and fat are derived
+   from the remaining calories after protein is accounted for. The split leans
+   carb-heavy for typical carb sources and fat-heavy for low-carb recipes — a
+   reasonable estimate, not a lab measurement (see foot-note). */
+function estimateMacros(r){
+  const proteinCal = r.protein * 4;
+  const remaining = Math.max(r.cal - proteinCal, 0);
+  let carbShare = 0.55;
+  if(r.carbSource === 'none') carbShare = 0.15;
+  else if(['rice','pasta','oats','potato','bread','quinoa','wrap'].includes(r.carbSource)) carbShare = 0.62;
+  const carbCal = remaining * carbShare;
+  const fatCal = remaining - carbCal;
+  return { carbs: Math.round(carbCal / 4), fat: Math.round(fatCal / 9) };
+}
+
 function estimateDailyTargets(weightKg, goal){
   if(!weightKg || weightKg<=0) return null;
   const maintenance = weightKg * 30;
@@ -1285,6 +1327,7 @@ function cardHTML(r, cal, protein, overBudgetNote){
   const stepsHTML = r.steps.map(s=>`<li>${s}</li>`).join('');
   const isFav = favourites.includes(r.name);
   const prepTag = r.mealPrepFriendly ? `<span class="tag">🧊 Meal-prep friendly</span>` : '';
+  const macros = estimateMacros(r);
 
   return `
   <div class="card">
@@ -1297,12 +1340,14 @@ function cardHTML(r, cal, protein, overBudgetNote){
     </div>
     <div class="card-top">
       <p class="card-name">${r.name}</p>
-      <div class="tag-row">${r.diet.map(d=>`<span class="tag">${d}</span>`).join('')}${r.pp?`<span class="tag pp">uses protein powder</span>`:''}${prepTag}</div>
+      <div class="tag-row">${r.diet.filter(d=>d!=='halal').map(d=>`<span class="tag">${d}</span>`).join('')}${r.pp?`<span class="tag pp">uses protein powder</span>`:''}${prepTag}</div>
     </div>
     <div class="macros">
       <div class="macro"><span class="n">${r.cal}</span><span class="l">kcal</span></div>
       <div class="macro"><span class="n">${r.protein}g</span><span class="l">protein</span></div>
-      <div class="macro"><span class="n">£${r.price.toFixed(2)}</span><span class="l">est. cost</span></div>
+      <div class="macro"><span class="n">${macros.carbs}g</span><span class="l">carbs</span></div>
+      <div class="macro"><span class="n">${macros.fat}g</span><span class="l">fat</span></div>
+      <div class="macro"><span class="n">£${r.price.toFixed(2)}</span><span class="l">cost</span></div>
     </div>
     ${note?`<div class="match-note">${note}</div>`:''}
     <div class="ingredients">${ingLinks}</div>
