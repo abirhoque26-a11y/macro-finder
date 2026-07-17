@@ -198,6 +198,52 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .pager-num.active{background:var(--orange);border-color:var(--orange);color:#FFF6ED;}
 .pager-ellipsis{color:var(--muted);font-family:'Oswald',sans-serif;font-size:12px;padding:0 2px;}
 
+/* week day-cards view */
+.week-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:24px;}
+.view-toggle{display:flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;}
+.view-toggle button{background:var(--card);border:none;color:var(--muted);font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:9px 20px;cursor:pointer;}
+.view-toggle button.active{background:var(--ink);color:var(--cream);}
+.week-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-top:18px;}
+.day-card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.day-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:var(--ink);color:var(--cream);padding:10px 14px;}
+.day-card-head .day-name{font-family:'Anton',sans-serif;font-size:16px;letter-spacing:.04em;text-transform:uppercase;}
+.day-badges{display:flex;gap:5px;flex-wrap:wrap;}
+.db{font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.06em;padding:3px 9px;border-radius:999px;background:rgba(244,239,225,.14);color:var(--cream);white-space:nowrap;}
+.db.gold{background:var(--gold);color:var(--ink);}
+.db.orange{background:var(--orange);color:#FFF6ED;}
+.day-meal{display:flex;align-items:center;gap:11px;padding:9px 12px;border-bottom:1px solid var(--line);}
+.day-meal:last-child{border-bottom:none;}
+.day-meal-img{width:48px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;background:#E9E2CC;}
+.day-meal-info{min-width:0;flex:1;}
+.day-meal-slot{display:inline-block;font-family:'Oswald',sans-serif;font-weight:600;font-size:8px;letter-spacing:.14em;text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-bottom:3px;}
+.slot-breakfast{background:rgba(217,180,74,.3);color:#7A5E10;}
+.slot-lunch{background:rgba(232,85,29,.14);color:var(--orange-deep);}
+.slot-dinner{background:var(--ink);color:var(--cream);}
+.slot-snack{background:rgba(78,107,36,.14);color:var(--herb);}
+.slot-shake{background:rgba(160,80,15,.14);color:#A0500F;}
+.day-meal-name{display:block;font-weight:600;font-size:13px;color:var(--ink);line-height:1.25;}
+.day-meal-stats{display:block;font-family:'Oswald',sans-serif;font-size:10.5px;letter-spacing:.04em;color:var(--muted);margin-top:1px;}
+.day-meal .swap-btn{margin-top:0;flex-shrink:0;}
+.day-meal.search-hit{background:rgba(232,85,29,.1);outline:1.5px solid var(--orange);outline-offset:-1.5px;}
+
+/* shopping list controls */
+.shop-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.shop-controls select{background:var(--card);border:1.5px solid var(--ink);color:var(--ink);padding:8px 12px;border-radius:999px;font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;}
+.shop-item{display:flex;align-items:flex-start;gap:10px;}
+.shop-item input[type="checkbox"]{width:17px;height:17px;accent-color:var(--orange);cursor:pointer;margin-top:2px;flex-shrink:0;}
+.shop-item.ticked strong, .shop-item.ticked .qty{text-decoration:line-through;opacity:.45;}
+.shop-item.ticked .links{opacity:.35;}
+.shop-item-body{flex:1;min-width:0;}
+
+/* quick / advanced plan mode */
+.mode-toggle{display:flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;width:fit-content;margin-bottom:24px;}
+.mode-toggle button{background:var(--card);border:none;color:var(--muted);font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:11px 26px;cursor:pointer;}
+.mode-toggle button.active{background:var(--orange);color:#FFF6ED;}
+.quick-only{display:none;}
+.form-panel.quick .quick-only{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-top:1px solid var(--line);margin-top:26px;padding-top:24px;}
+.form-panel.quick .adv-only{display:none;}
+.form-panel.quick .wizard-progress{display:none;}
+
 /* recipe cards */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(295px,1fr));gap:24px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s ease, box-shadow .15s ease;}
@@ -422,7 +468,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <div class="stats-strip">
       <div class="stat s-gold"><span class="stat-n">82+</span><span class="stat-l">Recipes &amp; growing</span></div>
       <div class="stat s-ink"><span class="stat-n">5</span><span class="stat-l">UK supermarkets linked</span></div>
-      <div class="stat s-orange"><span class="stat-n">100%</span><span class="stat-l">Personalised to your macros</span></div>
+      <div class="stat s-orange"><span class="stat-n">60s</span><span class="stat-l">Built around your kcal &amp; protein targets</span></div>
       <div class="stat s-paper"><span class="stat-n">£0</span><span class="stat-l">Free to use</span></div>
     </div>
   </div>
@@ -434,6 +480,10 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <h2 class="sec-title">Four steps.<br><span class="accent">One week of food.</span></h2>
 
     <div class="form-panel" id="wizardPanel">
+      <div class="mode-toggle" id="modeToggle">
+        <button data-mode="quick" type="button">⚡ Quick plan</button>
+        <button data-mode="advanced" class="active" type="button">Advanced</button>
+      </div>
       <div class="wizard-progress">
         <div class="wp current" data-step="1"></div>
         <div class="wp" data-step="2"></div>
@@ -463,12 +513,16 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
             <label>Weight (kg) <span class="badge optional">Optional</span></label>
             <input type="number" id="weight" placeholder="72">
           </div>
-          <div class="field form-full" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <div class="field form-full adv-only" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
             <button class="btn secondary small" id="suggestBtn" type="button">✦ Suggest targets from my weight</button>
             <span class="hint" id="suggestMsg" style="margin:0;"></span>
           </div>
         </div>
-        <div class="wizard-nav">
+        <div class="quick-only">
+          <button class="btn" id="quickBuildBtn" type="button">⚡ Build my week for me →</button>
+          <span class="hint" id="quickMsg" style="margin:0;max-width:420px;">Pick a goal, enter your weight, and we'll set sensible calorie and protein targets and build your full week — you can tweak anything afterwards.</span>
+        </div>
+        <div class="wizard-nav adv-only">
           <span class="wizard-count">Step 1 of 4</span>
           <button class="btn" type="button" onclick="wizardGo(2)">Next →</button>
         </div>
@@ -709,6 +763,27 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       </div>
     </div>
 
+    <details class="plans-card" id="aboutNumbers" style="margin-top:56px;">
+      <summary class="plans-card-head">
+        <h4>About the numbers</h4>
+        <span class="plans-card-head-right">
+          <span class="hint">where our figures come from</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </span>
+      </summary>
+      <div style="margin-top:14px;font-size:14px;line-height:1.75;color:#3F3B2F;">
+        <ul style="margin:0 0 12px;padding-left:20px;">
+          <li><strong>Calories &amp; protein</strong> are set per recipe from standard UK nutritional data for the listed ingredients and quantities.</li>
+          <li><strong>Carbs &amp; fat</strong> are estimated from the remaining calories and the recipe's main carb source — a close guide, not a lab measurement.</li>
+          <li><strong>Ingredient weights are raw/uncooked</strong> unless the ingredient itself says otherwise (e.g. "cooked rice").</li>
+          <li><strong>Serving sizes</strong> are one serving per recipe, automatically scaled up or down to match your calorie target (never below half or above triple the base portion).</li>
+          <li><strong>Prices</strong> are rough per-serving estimates for UK supermarkets, reviewed periodically — they vary by store, brand and season, so treat the weekly total as a ballpark.</li>
+          <li><strong>Suggested targets</strong> from your weight are generic starting points with a floor of 1400 kcal/day — they are not personal advice.</li>
+        </ul>
+        <p style="margin:0;font-size:13px;color:var(--muted);">Macro Mastery is a planning tool, not medical or dietetic advice. If you have a medical condition, a history of disordered eating, or significant weight-change goals, please speak to a doctor or registered dietitian before changing your diet.</p>
+      </div>
+    </details>
+
     <p class="foot-note">
       Prices are rough per-serving estimates for UK supermarkets and vary by store and season. Calories and protein are set per recipe; carbs and fat are estimated from the remaining calories and the recipe's main carb source, so treat them as a close guide rather than a lab measurement. Where a matching video exists, "Watch video" links straight to it; where it doesn't, "View recipe" always gives full written instructions regardless. Ingredient links and the shopping list open live searches on Tesco, Sainsbury's, Asda, Aldi and Lidl. In a deficit, matches lean toward higher protein-per-calorie recipes; in a surplus, toward more energy-dense ones — both still ranked primarily by closeness to your calorie and protein targets. On accounts: sign-in uses real email/password authentication via Supabase — your favourites, cooking checklist and saved plans are stored in a real database under your account, and Row Level Security policies mean only you can read or write your own rows. Recipe photos are illustrative food photography, not photos of the exact finished dish.
     </p>
@@ -780,9 +855,8 @@ let currentUser = null;
 
 if(SUPABASE_URL === 'YOUR_SUPABASE_URL'){
   window.addEventListener('DOMContentLoaded', ()=>{
-    const target = document.querySelector('.inner') || document.body;
-    target.insertAdjacentHTML('afterbegin',
-      '<div style="background:#E8551D;color:#FFF6ED;padding:14px 18px;border-radius:4px;margin-bottom:20px;font-family:monospace;font-size:13px;">⚠️ Set SUPABASE_URL and SUPABASE_ANON_KEY near the top of the script before sign-in and saving will work.</div>');
+    document.querySelector('.wrap').insertAdjacentHTML('afterbegin',
+      '<div style="background:#C97A5B;color:#1C1F1B;padding:14px 18px;border-radius:4px;margin-bottom:20px;font-family:monospace;font-size:13px;">⚠️ Set SUPABASE_URL and SUPABASE_ANON_KEY near the top of the script before sign-in and saving will work — see BACKEND_SETUP_GUIDE.md.</div>');
   });
 }
 
@@ -790,7 +864,12 @@ function updateAuthUI(){
   const signedIn = !!currentUser;
   document.getElementById('guestBar').style.display = signedIn ? 'none' : 'flex';
   document.getElementById('authedBar').style.display = signedIn ? 'flex' : 'none';
-  if(signedIn) document.getElementById('userEmailDisplay').textContent = currentUser.email;
+  if(signedIn){
+    // privacy: never show the full email address in the nav — just the name part
+    const local = (currentUser.email || '').split('@')[0];
+    const pretty = local.charAt(0).toUpperCase() + local.slice(1, 14);
+    document.getElementById('userEmailDisplay').textContent = pretty || 'Account';
+  }
 }
 document.getElementById('showAuthBtn').addEventListener('click', ()=>{
   document.getElementById('authRow').classList.toggle('show');
@@ -951,6 +1030,44 @@ document.getElementById('heroStartBtn').addEventListener('click', ()=>{
   document.getElementById('wizardPanel').scrollIntoView({behavior:'smooth', block:'start'});
 });
 
+/* ---------- Quick vs Advanced plan mode ----------
+   Quick: goal + weight → we set every target and build the full week in one click.
+   Advanced: the original four-step wizard with full control. */
+function setPlanMode(mode){
+  document.getElementById('wizardPanel').classList.toggle('quick', mode === 'quick');
+  document.querySelectorAll('#modeToggle button').forEach(b=>b.classList.toggle('active', b.dataset.mode === mode));
+  if(mode === 'quick') wizardGo(1);
+}
+document.querySelectorAll('#modeToggle button').forEach(b=>b.addEventListener('click', ()=>setPlanMode(b.dataset.mode)));
+
+document.getElementById('quickBuildBtn').addEventListener('click', ()=>{
+  const msg = document.getElementById('quickMsg');
+  const w = parseFloat(document.getElementById('weight').value);
+  if(!w || w <= 0){
+    msg.textContent = 'Enter your weight above first — that\'s all we need to size your targets. Or switch to Advanced to set everything yourself.';
+    return;
+  }
+  const daily = estimateDailyTargets(w, state.goal);
+  // per-meal targets for the matches section
+  const prop = SLOT_PROPORTIONS[state.meal];
+  document.getElementById('cal').value = Math.round(daily.calories*prop);
+  document.getElementById('protein').value = Math.round(daily.protein*prop);
+  // daily targets + default slots for the week builder
+  document.getElementById('wkCal').value = daily.calories;
+  document.getElementById('wkProtein').value = daily.protein;
+  activeSlots = ['breakfast','lunch','dinner','snack'];
+  document.querySelectorAll('#chip-slots .chip').forEach(c=>c.classList.toggle('active', activeSlots.includes(c.dataset.val)));
+  msg.textContent = `Built from ${w}kg, ${state.goal}: ≈${daily.calories} kcal / ${daily.protein}g protein per day. Scroll down to see your week — swap any meal you don't fancy.` + clampNote(daily);
+  render();
+  document.getElementById('weekPanel').style.display = 'block';
+  buildWeek();
+  document.getElementById('weekPanel').scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+// Quick is the default — beginners shouldn't need to know what a "surplus" is
+// before they can get a plan. Advanced is one click away.
+setPlanMode('quick');
+
 let RECIPES = [];
 
 async function loadRecipesFromDB(){
@@ -986,6 +1103,10 @@ let weekState = { candidatesBySlot:{}, planIndex:{}, activeSlots:[], weeklyBudge
 let activeSlots = ['breakfast','lunch','dinner','snack'];
 let cardCounter = 0;
 let planSearchQuery = '';
+let weekViewMode = 'cards';                                        // 'cards' | 'table'
+let preferredStore = localStorage.getItem('mm_store') || 'all';    // shopping list retailer
+let shopTicks = {};                                                // ingredient -> got it / already have it
+let lastShopList = null;                                           // snapshot for the print view
 
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 const SLOT_PROPORTIONS = { breakfast:0.22, lunch:0.27, dinner:0.31, snack:0.10, shake:0.10 };
@@ -1287,6 +1408,10 @@ function estimateMacros(r){
   return { carbs: Math.round(carbCal / 4), fat: Math.round(fatCal / 9) };
 }
 
+/* Suggested daily calories never go below this floor — very low intakes need
+   professional supervision, not an app's autofill. */
+const MIN_DAILY_CALORIES = 1400;
+
 function estimateDailyTargets(weightKg, goal){
   if(!weightKg || weightKg<=0) return null;
   const maintenance = weightKg * 30;
@@ -1294,7 +1419,12 @@ function estimateDailyTargets(weightKg, goal){
   if(goal==='deficit'){ calories = maintenance*0.8; proteinPerKg = 2.0; }
   else if(goal==='surplus'){ calories = maintenance*1.15; proteinPerKg = 1.6; }
   else { calories = maintenance; proteinPerKg = 1.8; }
-  return { calories: Math.round(calories/10)*10, protein: Math.round(weightKg*proteinPerKg) };
+  let clamped = false;
+  if(calories < MIN_DAILY_CALORIES){ calories = MIN_DAILY_CALORIES; clamped = true; }
+  return { calories: Math.round(calories/10)*10, protein: Math.round(weightKg*proteinPerKg), clamped };
+}
+function clampNote(daily){
+  return daily.clamped ? ` Suggestion capped at a minimum of ${MIN_DAILY_CALORIES} kcal/day — for anything lower, please speak to a doctor or dietitian.` : '';
 }
 
 document.getElementById('suggestBtn').addEventListener('click', ()=>{
@@ -1305,7 +1435,7 @@ document.getElementById('suggestBtn').addEventListener('click', ()=>{
   const prop = SLOT_PROPORTIONS[state.meal];
   document.getElementById('cal').value = Math.round(daily.calories*prop);
   document.getElementById('protein').value = Math.round(daily.protein*prop);
-  msg.textContent = `Estimated from ${w}kg, ${state.goal} (≈${daily.calories} kcal / ${daily.protein}g protein daily — a rough guide, adjust to your own results).`;
+  msg.textContent = `Estimated from ${w}kg, ${state.goal} (≈${daily.calories} kcal / ${daily.protein}g protein daily — a rough guide, adjust to your own results).` + clampNote(daily);
   render();
 });
 document.getElementById('wkSuggestBtn').addEventListener('click', ()=>{
@@ -1315,7 +1445,7 @@ document.getElementById('wkSuggestBtn').addEventListener('click', ()=>{
   if(!daily){ msg.textContent = 'Enter your weight in the section above first.'; return; }
   document.getElementById('wkCal').value = daily.calories;
   document.getElementById('wkProtein').value = daily.protein;
-  msg.textContent = `Estimated from ${w}kg, ${state.goal} phase — a rough guide, adjust to your own results.`;
+  msg.textContent = `Estimated from ${w}kg, ${state.goal} phase — a rough guide, adjust to your own results.` + clampNote(daily);
 });
 
 function storeLinks(ing){
@@ -1480,7 +1610,7 @@ function renderResultsPage(){
   let budgetTip = '';
   if(budget && currentMatches.some(r=>r.price > budget)){
     const cheapest = [...currentMatches].sort((a,b)=>a.price-b.price).slice(0,2).map(r=>r.name).join(' or ');
-    budgetTip = `<div style="background:#FAE7DB;border:1.5px solid var(--orange);border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--ink);">
+    budgetTip = `<div style="background:rgba(143,174,93,0.1);border:1px solid rgba(143,174,93,0.3);border-radius:3px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--herb);">
       💡 <strong>To stay within budget:</strong> try ${cheapest}. You can also reduce portion size by lowering your calorie target slightly, or swap expensive protein sources (salmon, lamb) for cheaper ones (chicken, eggs, lentils).
     </div>`;
   }
@@ -1634,6 +1764,25 @@ function parseQty(qtyStr){
   return { amount, unit: (m[2]||'').toLowerCase() };
 }
 
+const STORES = [
+  { id:'tesco', label:'Tesco' },
+  { id:'sains', label:"Sainsbury's" },
+  { id:'asda',  label:'Asda' },
+  { id:'aldi',  label:'Aldi' },
+  { id:'lidl',  label:'Lidl' }
+];
+
+function setPreferredStore(id){
+  preferredStore = id;
+  localStorage.setItem('mm_store', id);
+  if(weekState.activeSlots.length) renderWeekUI();
+}
+
+function toggleShopTick(key, checked, el){
+  shopTicks[key] = checked;
+  el.closest('.shop-item').classList.toggle('ticked', checked);
+}
+
 function buildShoppingListHTML(planMatrix, slots, weeklyCost){
   const map = {};
   planMatrix.forEach((dayPlan)=>{
@@ -1655,9 +1804,11 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
   });
 
   const catOrder = ['Protein','Carbs & bakery','Fruit & veg','Dairy & alternatives','Pantry & extras'];
+  lastShopList = { sections: [], weeklyCost };
   let sections = '';
   catOrder.forEach(cat=>{
     if(!cats[cat] || !cats[cat].length) return;
+    const printItems = [];
     const items = cats[cat].sort((a,b)=>a.display.localeCompare(b.display)).map(item=>{
       const byUnit = {};
       const unparsedCounts = {};
@@ -1671,14 +1822,27 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
         totalParts.push(count > 1 ? `${qty} ×${count}` : qty);
       });
       const totalStr = totalParts.join(' + ');
+      printItems.push({ name: item.display, qty: totalStr });
       const s = storeLinks(item.display);
-      return `<div class="shop-item">
-        <div><strong style="color:var(--ink);">${item.display}</strong><span class="qty">${totalStr}</span></div>
-        <div class="links"><a href="${s.tesco}" target="_blank">Tesco</a><a href="${s.sains}" target="_blank">Sainsbury's</a><a href="${s.asda}" target="_blank">Asda</a><a href="${s.aldi}" target="_blank">Aldi</a><a href="${s.lidl}" target="_blank">Lidl</a></div>
-      </div>`;
+      const key = item.display.toLowerCase();
+      const ticked = !!shopTicks[key];
+      const links = preferredStore === 'all'
+        ? STORES.map(st=>`<a href="${s[st.id]}" target="_blank">${st.label}</a>`).join('')
+        : `<a href="${s[preferredStore]}" target="_blank">Search at ${(STORES.find(st=>st.id===preferredStore)||{}).label}</a>`;
+      return `<label class="shop-item ${ticked?'ticked':''}">
+        <input type="checkbox" ${ticked?'checked':''} onchange="toggleShopTick('${esc(key)}', this.checked, this)">
+        <span class="shop-item-body">
+          <strong style="color:var(--ink);">${item.display}</strong><span class="qty">${totalStr}</span>
+          <span class="links" style="display:block;">${links}</span>
+        </span>
+      </label>`;
     }).join('');
+    lastShopList.sections.push({ cat, items: printItems });
     sections += `<div class="shop-cat"><h4>${cat}</h4>${items}</div>`;
   });
+
+  const storeOptions = [`<option value="all" ${preferredStore==='all'?'selected':''}>All stores</option>`]
+    .concat(STORES.map(st=>`<option value="${st.id}" ${preferredStore===st.id?'selected':''}>${st.label}</option>`)).join('');
 
   return `
   <div class="shop-list">
@@ -1686,9 +1850,39 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
       <h2>Shopping list</h2>
       <span class="results-count">£${weeklyCost.toFixed(2)} total</span>
     </div>
-    <p class="hint" style="margin-bottom:16px;">Quantities are combined across the week where units match (grams with grams, etc.); mixed units are listed side by side rather than guessed at.</p>
+    <div class="shop-controls">
+      <select onchange="setPreferredStore(this.value)" aria-label="Preferred supermarket">${storeOptions}</select>
+      <button class="pager-btn" onclick="printShoppingList()" type="button">🖨 Print list</button>
+    </div>
+    <p class="hint" style="margin-bottom:16px;">Tick items off as you shop — or tick anything you already have at home. Pick your usual supermarket above to see one search link per item instead of five. Quantities are combined across the week where units match; mixed units are listed side by side rather than guessed at.</p>
     ${sections}
   </div>`;
+}
+
+function printShoppingList(){
+  if(!lastShopList) return;
+  const secs = lastShopList.sections.map(s=>`
+    <h3>${s.cat}</h3>
+    <ul>${s.items.map(i=>`<li><span class="box"></span>${i.name} — ${i.qty}</li>`).join('')}</ul>`).join('');
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Shopping list — Macro Mastery</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#141412;max-width:640px;margin:24px auto;padding:0 16px;}
+      h1{font-size:20px;border-bottom:2px solid #141412;padding-bottom:8px;}
+      h3{font-size:14px;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 6px;}
+      ul{list-style:none;padding:0;margin:0;}
+      li{padding:5px 0;border-bottom:1px solid #ddd;font-size:14px;}
+      .box{display:inline-block;width:13px;height:13px;border:1.5px solid #141412;margin-right:10px;vertical-align:-2px;}
+      .total{margin-top:16px;font-weight:bold;}
+    </style></head><body>
+    <h1>Shopping list — Macro Mastery</h1>
+    ${secs}
+    <p class="total">Estimated total: £${lastShopList.weeklyCost.toFixed(2)}</p>
+    <p style="font-size:11px;color:#777;">Prices are rough per-serving estimates and vary by store and season.</p>
+    </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
 }
 
 function renderProgressHTML(){
@@ -1704,7 +1898,7 @@ function renderProgressHTML(){
       <h2 style="font-size:20px;">This week's cooking checklist</h2>
       <span class="results-count">${doneCount}/7 days</span>
     </div>
-    <p class="hint">Tick off each day you cook from the plan. <a href="#" onclick="resetProgress();return false;" style="color:var(--orange);">Reset for a new week</a></p>
+    <p class="hint">Tick off each day you cook from the plan. <a href="#" onclick="resetProgress();return false;" style="color:var(--herb);">Reset for a new week</a></p>
     <div class="progress-days">${days}</div>
   </div>`;
 }
@@ -1730,16 +1924,16 @@ function getRecipesInCurrentPlan(){
 
 function applyPlanSearchHighlight(){
   const q = planSearchQuery.trim().toLowerCase();
-  document.querySelectorAll('td.slot-cell[data-di]').forEach(td=>{
-    const nameEl = td.querySelector('.rname');
+  document.querySelectorAll('td.slot-cell[data-di], .day-meal[data-di]').forEach(el=>{
+    const nameEl = el.querySelector('.rname');
     const name = nameEl ? nameEl.textContent.toLowerCase() : '';
-    td.classList.toggle('search-hit', !!q && name.includes(q));
+    el.classList.toggle('search-hit', !!q && name.includes(q));
   });
   const resultsDiv = document.getElementById('planSearchResults');
   const matchesDiv = document.getElementById('planSearchMatches');
   if(!resultsDiv) return;
   if(!q){ resultsDiv.textContent=''; if(matchesDiv) matchesDiv.innerHTML=''; return; }
-  const hitCells = document.querySelectorAll('td.slot-cell.search-hit');
+  const hitCells = document.querySelectorAll('td.slot-cell.search-hit, .day-meal.search-hit');
   if(!hitCells.length){
     resultsDiv.textContent = "Not in this week's plan.";
     if(matchesDiv) matchesDiv.innerHTML = '';
@@ -1773,23 +1967,31 @@ document.getElementById('planSearch').addEventListener('input', function(){
   applyPlanSearchHighlight();
 });
 
+function setWeekView(v){
+  weekViewMode = v;
+  renderWeekUI();
+}
+
 function renderWeekUI(){
   const ws = weekState;
   if(!ws.activeSlots || !ws.activeSlots.length) return;
 
   let weeklyCost = 0;
   let rows = '';
+  let dayCards = '';
   let dayTotals = [];
   let planMatrix = [];
 
   DAYS.forEach((day, di)=>{
     let rowCal=0, rowProtein=0, rowCost=0;
     let cells = '';
+    let meals = '';
     let dayPlan = {};
     ws.activeSlots.forEach(slot=>{
       const cands = ws.candidatesBySlot[slot].list;
       if(!cands.length){
         cells += `<td class="slot-cell" data-di="${di}" data-slot="${slot}">—</td>`;
+        meals += `<div class="day-meal" data-di="${di}" data-slot="${slot}"><div class="day-meal-info"><span class="day-meal-slot slot-${slot}">${slot}</span><span class="day-meal-name rname">No match found</span></div></div>`;
         dayPlan[slot] = null;
         return;
       }
@@ -1799,11 +2001,33 @@ function renderWeekUI(){
       rowCal+=r.cal; rowProtein+=r.protein; rowCost+=r.price;
       const swapBtn = cands.length>1 ? `<button class="swap-btn" onclick="weekSwap(${di},'${slot}')" title="Swap for another close match" type="button">⟳ swap</button>` : '';
       cells += `<td class="slot-cell" data-di="${di}" data-slot="${slot}"><span class="rname">${r.name}</span><span class="rmacro">${r.cal}kcal · ${r.protein}g · £${r.price.toFixed(2)}</span>${swapBtn}</td>`;
+      meals += `
+      <div class="day-meal" data-di="${di}" data-slot="${slot}">
+        <img class="day-meal-img" src="${foodImg(r)}" alt="" loading="lazy">
+        <div class="day-meal-info">
+          <span class="day-meal-slot slot-${slot}">${slot}</span>
+          <span class="day-meal-name rname">${r.name}</span>
+          <span class="day-meal-stats">${r.cal} kcal · ${r.protein}g protein · £${r.price.toFixed(2)}</span>
+        </div>
+        ${swapBtn}
+      </div>`;
     });
     planMatrix.push(dayPlan);
     weeklyCost += rowCost;
     dayTotals.push({cal:rowCal, protein:rowProtein, cost:rowCost});
     rows += `<tr><td class="day">${day}</td>${cells}<td class="slot-cell"><span class="rname">${rowCal} kcal</span><span class="rmacro">${rowProtein}g protein · £${rowCost.toFixed(2)}</span></td></tr>`;
+    dayCards += `
+    <div class="day-card">
+      <div class="day-card-head">
+        <span class="day-name">${day}</span>
+        <span class="day-badges">
+          <span class="db">${rowCal} kcal</span>
+          <span class="db gold">${rowProtein}g</span>
+          <span class="db orange">£${rowCost.toFixed(2)}</span>
+        </span>
+      </div>
+      ${meals}
+    </div>`;
   });
 
   const overBudget = ws.weeklyBudget && weeklyCost > ws.weeklyBudget;
@@ -1834,15 +2058,15 @@ function renderWeekUI(){
         `<li>${s.day} ${s.slot}: swap <strong>${s.from}</strong> (£${s.fromPrice.toFixed(2)}) for <strong>${s.to}</strong> (£${s.toPrice.toFixed(2)}) — saves £${s.saving.toFixed(2)}</li>`
       ).join('');
       budgetSuggestHTML = `
-      <div style="background:#FAE7DB;border:1.5px solid var(--orange);border-radius:6px;padding:16px 20px;margin-top:18px;font-size:13px;color:var(--ink);">
-        <p style="margin:0 0 8px;font-family:'Anton',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:.02em;color:var(--orange-deep);">💡 You're £${overspend.toFixed(2)} over budget — here's how to fix it</p>
+      <div style="background:rgba(143,174,93,0.1);border:1px solid rgba(143,174,93,0.35);border-radius:4px;padding:16px 18px;margin-top:18px;font-size:13px;color:var(--paper);">
+        <p style="margin:0 0 8px;font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--herb);">💡 You're £${overspend.toFixed(2)} over budget — here's how to fix it</p>
         <ul style="margin:0 0 8px;padding-left:18px;line-height:1.7;">${swapLines}</ul>
-        <p style="margin:0;font-size:12px;color:var(--muted);">Use the ⟳ swap button on those meals to make the change. Across the whole week there's up to £${totalPossible.toFixed(2)} of savings available. Cheaper protein sources (chicken, eggs, lentils, beans) generally cost less than salmon, lamb or prawns.</p>
+        <p class="hint" style="margin:0;">Use the ⟳ swap button on those meals to make the change (keep pressing until the cheaper recipe appears). Across the whole week there's up to £${totalPossible.toFixed(2)} of savings available through swaps. Cheaper protein sources (chicken, eggs, lentils, beans) generally cost less than salmon, lamb or prawns.</p>
       </div>`;
     } else {
       budgetSuggestHTML = `
-      <div style="background:#FAE7DB;border:1.5px solid var(--orange);border-radius:6px;padding:16px 20px;margin-top:18px;font-size:13px;color:var(--ink);">
-        <p style="margin:0;color:var(--orange-deep);">💡 You're £${overspend.toFixed(2)} over budget, and these are already the cheapest matching recipes. Try relaxing a dietary filter or ingredient preference to unlock cheaper options, or reduce your calorie target slightly for smaller, cheaper portions.</p>
+      <div style="background:rgba(143,174,93,0.1);border:1px solid rgba(143,174,93,0.35);border-radius:4px;padding:16px 18px;margin-top:18px;font-size:13px;color:var(--paper);">
+        <p style="margin:0;color:var(--herb);">💡 You're £${overspend.toFixed(2)} over budget, and these are already the cheapest matching recipes. Try relaxing a dietary filter or ingredient preference to unlock cheaper options, or reduce your calorie target slightly for smaller, cheaper portions.</p>
       </div>`;
     }
   }
@@ -1851,13 +2075,23 @@ function renderWeekUI(){
   const shopHTML = buildShoppingListHTML(planMatrix, ws.activeSlots, weeklyCost);
   const progressHTML = renderProgressHTML();
 
+  const planViewHTML = weekViewMode === 'table'
+    ? `<div class="week-table-wrap">
+        <table class="week">
+          <thead>${header}</thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`
+    : `<div class="week-cards">${dayCards}</div>`;
+
   document.getElementById('weekResults').innerHTML = `
-    <div class="week-table-wrap">
-      <table class="week">
-        <thead>${header}</thead>
-        <tbody>${rows}</tbody>
-      </table>
+    <div class="week-toolbar">
+      <div class="view-toggle">
+        <button class="${weekViewMode==='cards'?'active':''}" onclick="setWeekView('cards')" type="button">Day cards</button>
+        <button class="${weekViewMode==='table'?'active':''}" onclick="setWeekView('table')" type="button">Table</button>
+      </div>
     </div>
+    ${planViewHTML}
     <div class="week-summary">
       <div><span class="n">£${weeklyCost.toFixed(2)}</span>Estimated weekly cost</div>
       ${ws.weeklyBudget ? `<div><span class="n ${overBudget?'over':''}">${overBudget? '+£'+(weeklyCost-ws.weeklyBudget).toFixed(2)+' over' : '£'+(ws.weeklyBudget-weeklyCost).toFixed(2)+' under'}</span>vs your £${ws.weeklyBudget.toFixed(2)} budget</div>` : ''}
