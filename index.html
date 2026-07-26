@@ -236,7 +236,9 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .view-toggle{display:flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;}
 .view-toggle button{background:var(--card);border:none;color:var(--muted);font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:9px 20px;cursor:pointer;}
 .view-toggle button.active{background:var(--ink);color:var(--cream);}
-.week-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-top:18px;}
+/* min() keeps a track from ever exceeding its container — without it the 300px
+   minimum overflows the boxed section on narrow screens */
+.week-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:18px;margin-top:18px;}
 .day-card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
 .day-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:var(--ink);color:var(--cream);padding:10px 14px;}
 .day-card-head .day-name{font-family:'Anton',sans-serif;font-size:16px;letter-spacing:.04em;text-transform:uppercase;}
@@ -318,6 +320,14 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .coach-stat b{display:block;font-family:'Anton',sans-serif;font-weight:400;font-size:26px;letter-spacing:.01em;color:var(--cream);margin-bottom:2px;}
 .coach-stat b.gold{color:var(--gold);}
 .coach-stat b.orange{color:var(--orange);}
+
+/* boxed sections inside the week panel, so the results read as distinct
+   chunks rather than one continuous scroll */
+.week-section{background:var(--card-alt);border:1.5px solid var(--line-strong);border-radius:8px;padding:24px 26px;margin-top:22px;}
+.week-section > .results-head:first-child{margin-top:0;}
+.week-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:11px;margin-bottom:4px;}
+.week-section-head h3{margin:0;font-family:'Anton',sans-serif;font-size:24px;text-transform:uppercase;letter-spacing:.02em;color:var(--ink);}
+.week-section-head .sub{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
 
 /* week balance check */
 .balance-note{background:rgba(217,180,74,.16);border:1.5px solid var(--gold);border-radius:6px;padding:14px 18px;margin-top:16px;font-size:13px;color:#5B4A10;}
@@ -468,6 +478,8 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
   .nav-links{gap:16px;}
   .inner, .auth-shelf{padding-left:18px;padding-right:18px;}
   .form-panel, #weekPanel{padding:24px 18px;}
+  .week-section{padding:18px 14px;}
+  .week-section-head h3{font-size:20px;}
   #seg-goal{grid-template-columns:1fr;}
   .method-grid{grid-template-columns:1fr;}
   .actions{justify-content:stretch;}
@@ -2687,8 +2699,8 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
     : '';
 
   return `
-  <div class="shop-list">
-    <div class="results-head" style="margin-top:36px;">
+  <div class="shop-list" style="margin-top:0;">
+    <div class="results-head" style="margin-top:0;">
       <h2>Shopping list</h2>
       <span class="results-count">£${weeklyCost.toFixed(2)} total</span>
     </div>
@@ -3005,28 +3017,44 @@ function renderWeekUI(){
 
   document.getElementById('weekResults').innerHTML = `
     ${buildCoachSummary(dayTotals, weeklyCost, ws.weeklyBudget)}
-    <div class="week-toolbar">
-      <div class="view-toggle">
-        <button class="${weekViewMode==='cards'?'active':''}" onclick="setWeekView('cards')" type="button">Day cards</button>
-        <button class="${weekViewMode==='table'?'active':''}" onclick="setWeekView('table')" type="button">Table</button>
+
+    <section class="week-section">
+      <div class="week-section-head">
+        <h3>Your 7-day plan</h3>
+        <span class="sub">${ws.activeSlots.length * 7} meals · ${ws.activeSlots.join(' · ')}</span>
       </div>
-      <button class="customize-btn ${weekCustomize?'active':''}" onclick="setWeekCustomize(${weekCustomize?'false':'true'})" type="button">${weekCustomize ? '✓ Done customising' : '🎛 Customise meals'}</button>
-    </div>
-    ${weekCustomize ? `<p class="hint" style="margin-top:10px;">Pick exactly what you want for any meal from its dropdown — every option respects your filters and is a close macro match. Hit "Done customising" when you're happy.</p>` : ''}
-    ${ws.pinNote ? `<p class="hint" style="margin-top:10px;color:var(--orange-deep);">${ws.pinNote}</p>` : ''}
-    ${planViewHTML}
-    <div class="week-summary">
-      <div><span class="n">£${weeklyCost.toFixed(2)}</span>Estimated weekly cost</div>
-      ${ws.weeklyBudget ? `<div><span class="n ${overBudget?'over':''}">${overBudget? '+£'+(weeklyCost-ws.weeklyBudget).toFixed(2)+' over' : '£'+(ws.weeklyBudget-weeklyCost).toFixed(2)+' under'}</span>vs your £${ws.weeklyBudget.toFixed(2)} budget</div>` : ''}
-      <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.cal,0)/7)}</span>Avg daily kcal</div>
-      <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.protein,0)/7)}g</span>Avg daily protein</div>
-    </div>
-    ${nextWeekMsg ? `<div class="nextweek-changes">${nextWeekMsg}</div>` : ''}
-    ${balanceHTML}
-    ${autoSwapMsg ? `<div class="autoswap-note">✓ ${autoSwapMsg}</div>` : ''}
-    ${budgetSuggestHTML}
-    <p class="hint" style="margin-top:14px;">Hit ⟳ swap on any meal to cycle to another close macro match — diet, skill, protein-powder and ingredient settings stay respected.</p>
-    ${shopHTML}
+      <div class="week-toolbar">
+        <div class="view-toggle">
+          <button class="${weekViewMode==='cards'?'active':''}" onclick="setWeekView('cards')" type="button">Day cards</button>
+          <button class="${weekViewMode==='table'?'active':''}" onclick="setWeekView('table')" type="button">Table</button>
+        </div>
+        <button class="customize-btn ${weekCustomize?'active':''}" onclick="setWeekCustomize(${weekCustomize?'false':'true'})" type="button">${weekCustomize ? '✓ Done customising' : '🎛 Customise meals'}</button>
+      </div>
+      ${weekCustomize ? `<p class="hint" style="margin-top:10px;">Pick exactly what you want for any meal from its dropdown — every option respects your filters and is a close macro match. Hit "Done customising" when you're happy.</p>` : ''}
+      ${ws.pinNote ? `<p class="hint" style="margin-top:10px;color:var(--orange-deep);">${ws.pinNote}</p>` : ''}
+      ${planViewHTML}
+      <p class="hint" style="margin-top:14px;">Hit ⟳ swap on any meal to cycle to another close macro match, or "all week" to use it every day — your diet, skill and ingredient settings stay respected.</p>
+    </section>
+
+    <section class="week-section">
+      <div class="week-section-head">
+        <h3>Totals &amp; balance</h3>
+        <span class="sub">across the whole week</span>
+      </div>
+      <div class="week-summary">
+        <div><span class="n">£${weeklyCost.toFixed(2)}</span>Estimated weekly cost</div>
+        ${ws.weeklyBudget ? `<div><span class="n ${overBudget?'over':''}">${overBudget? '+£'+(weeklyCost-ws.weeklyBudget).toFixed(2)+' over' : '£'+(ws.weeklyBudget-weeklyCost).toFixed(2)+' under'}</span>vs your £${ws.weeklyBudget.toFixed(2)} budget</div>` : ''}
+        <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.cal,0)/7)}</span>Avg daily kcal</div>
+        <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.protein,0)/7)}g</span>Avg daily protein</div>
+      </div>
+      ${nextWeekMsg ? `<div class="nextweek-changes">${nextWeekMsg}</div>` : ''}
+      ${balanceHTML}
+      ${autoSwapMsg ? `<div class="autoswap-note">✓ ${autoSwapMsg}</div>` : ''}
+      ${budgetSuggestHTML}
+    </section>
+
+    <section class="week-section">${shopHTML}</section>
+
     ${progressHTML}
   `;
   autoSwapMsg = '';
