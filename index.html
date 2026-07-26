@@ -39,7 +39,7 @@ img{max-width:100%;}
 .nav-logo i{font-family:'Oswald',sans-serif;font-style:normal;font-size:11px;letter-spacing:.14em;color:var(--muted);margin-left:4px;vertical-align:2px;}
 .nav-links{display:flex;gap:28px;flex-wrap:wrap;}
 .nav-links a{color:var(--ink);text-decoration:none;font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:4px 0;border-bottom:2px solid transparent;}
-.nav-links a:hover{border-bottom-color:var(--orange);color:var(--orange);}
+.nav-links a:hover, .nav-links a.active{border-bottom-color:var(--orange);color:var(--orange);}
 .nav-account{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
 .nav-account .acct{display:flex;gap:10px;align-items:center;font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.06em;color:var(--muted);}
 .nav-account strong{color:var(--ink);font-weight:600;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -390,6 +390,9 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
 .slot-cell.search-hit{background:rgba(232,85,29,.12);outline:1.5px solid var(--orange);}
 .swap-btn{margin-top:6px;background:none;border:1px solid var(--ink);color:var(--ink);font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 11px;border-radius:999px;cursor:pointer;}
 .swap-btn:hover{background:var(--ink);color:var(--cream);}
+.meal-btns{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.allweek-btn{margin-top:6px;background:none;border:1px dashed var(--line-strong);color:var(--muted);font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 11px;border-radius:999px;cursor:pointer;white-space:nowrap;}
+.allweek-btn:hover{background:var(--gold);border-color:var(--gold);border-style:solid;color:var(--ink);}
 .week-summary{display:flex;gap:34px;flex-wrap:wrap;margin-top:22px;font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
 .week-summary .n{font-family:'Anton',sans-serif;font-weight:400;font-size:27px;letter-spacing:.01em;color:var(--ink);display:block;line-height:1.15;}
 .week-summary .over{color:var(--danger)!important;}
@@ -928,6 +931,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
             <input type="text" id="pantryInput" placeholder="Type anything — e.g. chicken, rice, eggs..." style="width:auto;flex:1;min-width:220px;">
             <button class="btn small" id="pantryAddBtn" type="button">Add</button>
           </div>
+          <span class="hint" id="pantryMsg" style="display:block;margin-top:8px;"></span>
           <p class="hint" style="margin-top:10px;">
             Or tap the common ingredients below.
             <label style="cursor:pointer;display:inline-block;margin-left:6px;"><input type="checkbox" id="pantryStaples" checked style="accent-color:var(--orange);vertical-align:-2px;"> Assume I have basics (oil, salt, pepper, spices &amp; sauces)</label>
@@ -2387,6 +2391,25 @@ function weekSwap(di, slot){
   renderWeekUI();
 }
 
+/* Apply this day's meal to the same slot on every other day — saves changing
+   the same breakfast seven times over. */
+function applyMealToWholeWeek(di, slot){
+  const ws = weekState;
+  const list = ws.candidatesBySlot[slot] ? ws.candidatesBySlot[slot].list : [];
+  if(!list.length) return;
+  const idx = ws.planIndex[di][slot];
+  const name = list[idx].name;
+  let changed = 0;
+  DAYS.forEach((d, i)=>{
+    if(ws.planIndex[i][slot] !== idx){ ws.planIndex[i][slot] = idx; changed++; }
+  });
+  renderWeekUI();
+  snapshotLastWeek();
+  showToast(changed
+    ? `${name} set for ${slot} on all 7 days (${changed} day${changed!==1?'s':''} changed)`
+    : `${name} was already your ${slot} every day`);
+}
+
 /* Customise mode: every meal becomes a dropdown of its close-match candidates,
    so you can pick exactly what you want instead of cycling with swap. */
 function setWeekCustomize(on){
@@ -2718,12 +2741,14 @@ function renderWeekUI(){
       dayPlan[slot] = r;
       rowCal+=r.cal; rowProtein+=r.protein; rowCost+=r.price;
       const swapBtn = cands.length>1 ? `<button class="swap-btn" onclick="weekSwap(${di},'${slot}')" title="Swap for another close match" type="button">⟳ swap</button>` : '';
+      const allWeekBtn = `<button class="allweek-btn" onclick="applyMealToWholeWeek(${di},'${slot}')" title="Use this ${slot} on all 7 days" type="button">all week</button>`;
+      const mealBtns = cands.length>1 ? `<span class="meal-btns">${swapBtn}${allWeekBtn}</span>` : '';
       const pickHTML = (weekCustomize && cands.length>1)
         ? `<select class="meal-pick" onchange="pickMeal(${di},'${slot}',this.value)" aria-label="Choose ${slot} for ${day}">
             ${cands.map((c,i)=>`<option value="${i}" ${i===idx?'selected':''}>${c.name} · ${c.cal} kcal · £${c.price.toFixed(2)}</option>`).join('')}
           </select>`
         : '';
-      cells += `<td class="slot-cell" data-di="${di}" data-slot="${slot}"><span class="rname">${r.name}</span><span class="rmacro">${r.cal}kcal · ${r.protein}g · £${r.price.toFixed(2)}</span>${pickHTML || swapBtn}</td>`;
+      cells += `<td class="slot-cell" data-di="${di}" data-slot="${slot}"><span class="rname">${r.name}</span><span class="rmacro">${r.cal}kcal · ${r.protein}g · £${r.price.toFixed(2)}</span>${pickHTML ? pickHTML + allWeekBtn : mealBtns}</td>`;
       meals += `
       <div class="day-meal" data-di="${di}" data-slot="${slot}">
         <img class="day-meal-img" src="${foodImg(r)}" alt="" loading="lazy">
@@ -2732,8 +2757,9 @@ function renderWeekUI(){
           <span class="day-meal-name rname">${r.name}</span>
           <span class="day-meal-stats">${r.cal} kcal · ${r.protein}g protein · £${r.price.toFixed(2)}</span>
           ${pickHTML}
+          ${weekCustomize ? `<span class="meal-btns">${allWeekBtn}</span>` : ''}
         </div>
-        ${weekCustomize ? '' : swapBtn}
+        ${weekCustomize ? '' : mealBtns}
       </div>`;
     });
     planMatrix.push(dayPlan);
@@ -2890,10 +2916,80 @@ function clearPantry(){
   refreshPantryUI();
   saveProfileSoon();
 }
+/* Does this typed word appear in any recipe's ingredient list? Mirrors the same
+   fuzzy rules as pantryCovers so what you can add matches what can be found. */
+function ingredientKnown(key){
+  return RECIPES.some(r=>r.ing.some(([name])=>{
+    const n = normIng(name);
+    if(n.includes(key) || key.includes(n)) return true;
+    const nWords = n.split(' ');
+    return key.split(' ').some(w=>w.length>3 && nWords.includes(w));
+  }));
+}
+/* Nearest ingredient names, for a "did you mean" hint. Ranked by how much of
+   the typed word actually matches the start of a word in the ingredient, so a
+   typo like "chickn" suggests chicken rather than dark chocolate chips. */
+function suggestIngredients(key){
+  const prefixLen = (a, b)=>{ let i = 0; while(i < a.length && i < b.length && a[i] === b[i]) i++; return i; };
+  const seen = new Set(), scored = [];
+  RECIPES.forEach(r=>r.ing.forEach(([name])=>{
+    const n = normIng(name);
+    if(seen.has(n) || isStaple(name)) return;
+    seen.add(n);
+    // best prefix overlap between the typed word and any word of this ingredient
+    const score = Math.max(...n.split(' ').map(w=>prefixLen(key, w)), prefixLen(key, n));
+    if(score >= 3) scored.push({ n, score });
+  }));
+  scored.sort((a, b)=> b.score - a.score || a.n.length - b.n.length);
+  if(scored.length) return scored.slice(0, 4).map(s=>s.n);
+
+  // Nothing matched by prefix — fall back to edit distance, which catches
+  // typos in the middle of a word ("samon" -> salmon, "avacado" -> avocado).
+  const dist = (a, b)=>{
+    const m = a.length, n = b.length;
+    let prev = Array.from({length:n+1}, (_,j)=>j), cur = new Array(n+1);
+    for(let i=1;i<=m;i++){
+      cur[0] = i;
+      for(let j=1;j<=n;j++){
+        cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1]===b[j-1] ? 0 : 1));
+      }
+      [prev, cur] = [cur, prev];
+    }
+    return prev[n];
+  };
+  const near = [];
+  seen.forEach(n=>{
+    n.split(' ').concat([n]).forEach(w=>{
+      if(w.length < 4) return;
+      const d = dist(key, w);
+      if(d <= 2 && d < w.length / 2) near.push({ n, d });
+    });
+  });
+  near.sort((a, b)=> a.d - b.d || a.n.length - b.n.length);
+  const uniq = [];
+  near.forEach(x=>{ if(!uniq.includes(x.n)) uniq.push(x.n); });
+  return uniq.slice(0, 4);
+}
+
 function addPantryFromInput(){
   const input = document.getElementById('pantryInput');
+  const msg = document.getElementById('pantryMsg');
   const key = normIng(input.value);
-  if(key && !pantryItems.includes(key)) pantryItems.push(key);
+  if(!key){ msg.textContent = 'Type an ingredient first.'; return; }
+  if(pantryItems.includes(key)){
+    msg.textContent = `"${key}" is already in your kitchen.`;
+    input.value = '';
+    return;
+  }
+  if(!ingredientKnown(key)){
+    const near = suggestIngredients(key);
+    msg.innerHTML = `No recipe uses "<strong>${key}</strong>" — so adding it wouldn't unlock anything.`
+      + (near.length ? ` Did you mean: ${near.map(n=>`<a href="#" onclick="document.getElementById('pantryInput').value='${esc(n)}';addPantryFromInput();return false;" style="color:var(--orange-deep);font-weight:600;">${n}</a>`).join(' · ')}?`
+                     : ` Try one of the common ingredients below instead.`);
+    return;
+  }
+  pantryItems.push(key);
+  msg.textContent = `Added "${key}".`;
   input.value = '';
   refreshPantryUI();
   saveProfileSoon();
@@ -2970,6 +3066,44 @@ function refreshPantryUI(){
   renderPantrySelected();
   renderPantryResults();
 }
+
+/* ---------- Scroll spy: highlight the nav link for the section in view ---------- */
+(function initScrollSpy(){
+  const ids = ['planner','matches','kitchen','how'];
+  const links = {};
+  ids.forEach(id=>{
+    const a = document.querySelector(`.nav-links a[href="#${id}"]`);
+    if(a) links[id] = a;
+  });
+  const sections = ids.map(id=>document.getElementById(id)).filter(Boolean);
+  if(!sections.length || !('IntersectionObserver' in window)) return;
+
+  const setActive = (id)=>{
+    Object.entries(links).forEach(([k, a])=>a.classList.toggle('active', k === id));
+  };
+
+  /* Sections are in DOM order, so the current one is the last whose top has
+     scrolled past a reference line just below the sticky header. Simpler and
+     more reliable than an IntersectionObserver here, because the Recipes
+     section is tall enough to overlap several detection bands at once. */
+  const LINE = 110;
+  let ticking = false;
+  function updateSpy(){
+    ticking = false;
+    if(window.scrollY < 120) return setActive(null);
+    // at the very bottom, the last section is always the current one
+    if(window.innerHeight + window.scrollY >= document.body.scrollHeight - 4){
+      return setActive(sections[sections.length-1].id);
+    }
+    let current = null;
+    sections.forEach(s=>{ if(s.getBoundingClientRect().top <= LINE) current = s.id; });
+    setActive(current);
+  }
+  window.addEventListener('scroll', ()=>{
+    if(!ticking){ ticking = true; requestAnimationFrame(updateSpy); }
+  }, { passive:true });
+  updateSpy();
+})();
 
 /* ---------- Init ---------- */
 document.getElementById('results').innerHTML = '<div class="empty">Loading recipes…</div>';
