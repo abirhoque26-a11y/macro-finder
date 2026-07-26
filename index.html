@@ -101,6 +101,10 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 
 /* auto budget swap note */
 .autoswap-note{background:rgba(78,107,36,.12);border:1.5px solid var(--herb);color:var(--herb);border-radius:6px;padding:13px 17px;margin-top:16px;font-size:13px;font-weight:600;}
+
+/* action toast */
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--cream);font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.08em;padding:12px 24px;border-radius:999px;z-index:400;opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;box-shadow:0 8px 26px rgba(20,20,18,.32);max-width:90vw;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .hero-card .hc-top{display:flex;justify-content:space-between;font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
 .hero-card .hc-top .kcal{color:var(--orange);font-weight:600;}
 .hero-card p{margin:0 0 6px;font-weight:600;font-size:16px;color:var(--ink);}
@@ -304,7 +308,7 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s ease, box-shadow .15s ease;}
 .card:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(20,20,18,.14);}
 .card-hero{height:195px;position:relative;background:#E9E2CC;}
-.card-photo{width:100%;height:100%;object-fit:cover;display:block;}
+.card-photo{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;}
 .meal-badge{position:absolute;top:12px;left:12px;background:var(--ink);color:var(--cream);font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;padding:6px 13px;border-radius:999px;}
 .price-badge{position:absolute;top:12px;right:12px;background:var(--orange);color:#FFF6ED;font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.05em;padding:5px 13px;border-radius:999px;}
 .skill-badge{position:absolute;bottom:12px;left:12px;background:rgba(20,20,18,.78);color:var(--cream);font-family:'Oswald',sans-serif;font-weight:600;font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;padding:5px 11px;border-radius:999px;}
@@ -481,6 +485,14 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
         <input type="password" id="authPassword" placeholder="Password (6+ characters)">
         <button class="btn small" id="authSignInBtn" type="button">Sign in</button>
         <button class="btn small secondary" id="authSignUpBtn" type="button">Create account</button>
+      </div>
+      <p class="hint" style="margin:10px 0 0;"><a href="#" id="forgotPwLink" style="color:var(--orange-deep);font-weight:600;">Forgot your password?</a> Type your email above first, then click here — we'll send you a reset link.</p>
+      <div id="resetPwRow" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line-strong);">
+        <p class="hint" style="margin:0 0 10px;"><strong>Set your new password</strong> — you followed a reset link, so you can choose a new one now.</p>
+        <div class="auth-fields">
+          <input type="password" id="newPassword" placeholder="New password (6+ characters)">
+          <button class="btn small" id="setNewPwBtn" type="button">Set new password</button>
+        </div>
       </div>
       <span class="hint" id="authMsg" style="display:block;margin-top:8px;"></span>
     </div>
@@ -1009,9 +1021,35 @@ document.getElementById('authSignInBtn').addEventListener('click', async ()=>{
 document.getElementById('signOutBtn').addEventListener('click', async ()=>{
   await supabaseClient.auth.signOut();
 });
+document.getElementById('forgotPwLink').addEventListener('click', async (e)=>{
+  e.preventDefault();
+  const email = document.getElementById('authEmail').value.trim();
+  const msg = document.getElementById('authMsg');
+  if(!email){ msg.textContent = 'Type your email address in the box above first, then click "Forgot your password?" again.'; return; }
+  msg.textContent = 'Sending reset email…';
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+  msg.textContent = error ? error.message : `Reset email sent to ${email} — check your inbox (and spam folder), click the link, and you'll come back here to set a new password.`;
+});
+document.getElementById('setNewPwBtn').addEventListener('click', async ()=>{
+  const pw = document.getElementById('newPassword').value;
+  const msg = document.getElementById('authMsg');
+  if(pw.length < 6){ msg.textContent = 'New password needs to be at least 6 characters.'; return; }
+  const { error } = await supabaseClient.auth.updateUser({ password: pw });
+  if(error){ msg.textContent = error.message; return; }
+  document.getElementById('resetPwRow').style.display = 'none';
+  document.getElementById('newPassword').value = '';
+  msg.textContent = 'Password updated — you\'re signed in.';
+  showToast('🔒 Password updated');
+});
 supabaseClient.auth.onAuthStateChange(async (event, session)=>{
   currentUser = session ? session.user : null;
   updateAuthUI();
+  if(event === 'PASSWORD_RECOVERY'){
+    document.getElementById('authRow').classList.add('show');
+    document.getElementById('resetPwRow').style.display = 'block';
+    document.getElementById('authMsg').textContent = 'You followed a password reset link — choose your new password above.';
+    document.getElementById('authRow').scrollIntoView({behavior:'smooth', block:'center'});
+  }
   favourites = currentUser ? await loadFavourites() : [];
   progress = currentUser ? await loadProgress() : {};
   savedPlans = currentUser ? await loadSavedPlans() : {};
@@ -1238,6 +1276,15 @@ function openHeroRecipe(){
   document.getElementById('recipeModal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
+/* any recipe card photo opens the same popup */
+function openRecipeByName(name){
+  const r = RECIPES.find(x=>x.name===name);
+  if(!r) return;
+  modalRecipe = r;
+  renderModalCard();
+  document.getElementById('recipeModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
 function closeRecipeModal(){
   document.getElementById('recipeModal').classList.remove('open');
   document.body.style.overflow = '';
@@ -1248,8 +1295,10 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeRecipeModal(
    Pin any recipe — from the matches, the "what can I cook" section, or the
    week panel's search box — and the week builder guarantees it a place. */
 function togglePin(name){
-  if(pinnedRecipes.includes(name)) pinnedRecipes = pinnedRecipes.filter(n=>n!==name);
-  else pinnedRecipes.push(name);
+  const adding = !pinnedRecipes.includes(name);
+  if(adding) pinnedRecipes.push(name);
+  else pinnedRecipes = pinnedRecipes.filter(n=>n!==name);
+  showToast(adding ? `📌 Pinned "${name}" — it'll be in your next week build` : `Unpinned "${name}"`);
   saveProfileSoon();
   renderPinChips();
   render();
@@ -1410,6 +1459,22 @@ const SLOT_PROPORTIONS = { breakfast:0.22, lunch:0.27, dinner:0.31, snack:0.10, 
 
 function esc(s){ return String(s).replace(/'/g, "\\'"); }
 
+/* Small action-feedback toast (pin, favourite, save, load…) */
+let toastTimer = null;
+function showToast(msg){
+  let t = document.getElementById('mmToast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'mmToast';
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  requestAnimationFrame(()=>t.classList.add('show'));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
 /* ---------- Storage: favourites, progress, saved plans — real rows in Supabase, scoped to the
    signed-in user by Row Level Security (see schema.sql). No user_id filtering needed client-side;
    RLS enforces it server-side even though the anon key is public. ---------- */
@@ -1450,6 +1515,7 @@ async function toggleFavourite(name){
     favourites.push(name);
     await supabaseClient.from('favourites').insert({ user_id: currentUser.id, recipe_name: name });
   }
+  showToast(isFav ? `Removed "${name}" from favourites` : `♥ Saved "${name}" to favourites`);
   render();
 }
 async function toggleProgress(day, checked){
@@ -1492,8 +1558,48 @@ function snapshotCurrentPlanConfig(){
       dinner: document.getElementById('varDinner').value,
       snack: document.getElementById('varSnack').value
     },
+    /* the exact built week — meals, swaps and customisations included — so
+       loading a plan restores precisely what you saved, not a regeneration */
+    week: weekState.activeSlots.length ? {
+      slots: weekState.activeSlots.slice(),
+      weeklyBudget: weekState.weeklyBudget || 0,
+      candidates: Object.fromEntries(weekState.activeSlots.map(s=>[s, weekState.candidatesBySlot[s].list.map(r=>r.name)])),
+      targets: Object.fromEntries(weekState.activeSlots.map(s=>[s, { cal: weekState.candidatesBySlot[s].targetCal, protein: weekState.candidatesBySlot[s].targetProtein }])),
+      planIndex: JSON.parse(JSON.stringify(weekState.planIndex))
+    } : null,
     savedAt: new Date().toISOString()
   };
+}
+
+/* Rebuild weekState from a saved plan's exact meal choices. Returns false if
+   the saved recipes can't all be found any more (then we regenerate instead). */
+function restoreExactWeek(w){
+  try{
+    if(!w || !Array.isArray(w.slots) || !w.slots.length) return false;
+    const candidatesBySlot = {};
+    let ok = true;
+    w.slots.forEach(s=>{
+      const list = ((w.candidates||{})[s]||[]).map(n=>RECIPES.find(r=>r.name===n)).filter(Boolean);
+      if(!list.length) ok = false;
+      const t = (w.targets||{})[s] || {};
+      candidatesBySlot[s] = { list, targetCal: t.cal||0, targetProtein: t.protein||0 };
+    });
+    if(!ok) return false;
+    const planIndex = {};
+    DAYS.forEach((d,di)=>{
+      planIndex[di] = {};
+      w.slots.forEach(s=>{
+        const saved = (w.planIndex && w.planIndex[di]) ? w.planIndex[di][s] : 0;
+        const len = candidatesBySlot[s].list.length;
+        planIndex[di][s] = (typeof saved==='number' && saved>=0 && saved<len) ? saved : 0;
+      });
+    });
+    activeSlots = w.slots.slice();
+    document.querySelectorAll('#chip-slots .chip').forEach(c=>c.classList.toggle('active', activeSlots.includes(c.dataset.val)));
+    weekState = { candidatesBySlot, planIndex, activeSlots: w.slots.slice(), weeklyBudget: parseFloat(w.weeklyBudget)||0, pinNote:'' };
+    renderWeekUI();
+    return true;
+  }catch(e){ console.error('restoreExactWeek', e); return false; }
 }
 
 function applySavedPlanConfig(cfg){
@@ -1540,6 +1646,7 @@ async function savePlan(){
   savedPlans[name] = config;
   nameInput.value = '';
   msg.textContent = `Saved "${name}".`;
+  showToast(`💾 Saved "${name}" — exact meals included`);
   renderSavedPlansList();
 }
 
@@ -1549,7 +1656,9 @@ async function loadPlan(name){
   applySavedPlanConfig(cfg);
   document.getElementById('weekPanel').style.display = 'block';
   render();
-  buildWeek();
+  const exact = cfg.week ? restoreExactWeek(cfg.week) : false;
+  if(!exact) buildWeek();
+  showToast(exact ? `Loaded "${name}" — your exact meals are back.` : `Loaded "${name}" — rebuilt from its settings.`);
   document.getElementById('myPlansSection').open = false;
   const weekPanel = document.getElementById('weekPanel');
   weekPanel.scrollIntoView({behavior:'smooth', block:'start'});
@@ -1819,7 +1928,7 @@ function cardHTML(r, cal, protein, overBudgetNote){
   return `
   <div class="card">
     <div class="card-hero">
-      <img class="card-photo" src="${foodImg(r)}" alt="${r.name}" loading="lazy">
+      <img class="card-photo" src="${foodImg(r)}" alt="${r.name}" loading="lazy" title="View full recipe" onclick="openRecipeByName('${esc(r.name)}')">
       <span class="meal-badge">${r.meal}</span>
       <span class="price-badge">£${r.price.toFixed(2)}</span>
       <span class="skill-badge">${r.skill}</span>
