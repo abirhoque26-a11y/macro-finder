@@ -262,6 +262,21 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .form-panel.quick .adv-only{display:none;}
 .form-panel.quick .wizard-progress{display:none;}
 
+/* "What can I cook" kitchen section */
+.kitchen-sec{background:var(--ink);color:var(--cream);padding:76px 0 88px;}
+.kitchen-sec .sec-eyebrow{color:var(--gold);}
+.kitchen-sec .sec-title{color:var(--cream);}
+.kitchen-sec .sec-title .accent{color:var(--gold);}
+.kitchen-sec .serif-line{color:#B9B2A0;}
+.pantry-cat{margin-top:16px;}
+.pantry-cat h5{margin:0 0 8px;font-family:'Oswald',sans-serif;font-weight:600;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);}
+.pantry-hit{display:flex;flex-direction:column;}
+.pantry-hit-note{font-family:'Oswald',sans-serif;font-weight:600;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:8px 13px;border-radius:8px 8px 0 0;background:#F1EAD6;color:#7A5E10;border:1px solid var(--line);border-bottom:none;line-height:1.5;}
+.pantry-hit-note.ok{background:var(--herb);color:#F4EFE1;border-color:var(--herb);}
+.pantry-hit .card{border-top-left-radius:0;border-top-right-radius:0;flex:1;}
+.pantry-clear{color:var(--orange-deep);text-decoration:none;font-weight:600;text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px;}
+.pantry-clear:hover{text-decoration:underline;}
+
 /* recipe cards */
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(295px,1fr));gap:24px;}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s ease, box-shadow .15s ease;}
@@ -417,6 +432,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <nav class="nav-links">
       <a href="#planner">Planner</a>
       <a href="#matches">Recipes</a>
+      <a href="#kitchen">My kitchen</a>
       <a href="#how">How it works</a>
       <a href="/about.html">About</a>
     </nav>
@@ -825,6 +841,33 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
   </div>
 </section>
 
+<section class="kitchen-sec" id="kitchen">
+  <div class="inner">
+    <p class="sec-eyebrow">The Kitchen</p>
+    <h2 class="sec-title">Cook with<br><span class="accent">what you've got.</span></h2>
+    <p class="serif-line">tick what's in your kitchen — we'll find the recipes.</p>
+
+    <div class="form-panel" style="margin-top:36px;">
+      <div class="form-grid">
+        <div class="field form-full">
+          <label>Add an ingredient</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="text" id="pantryInput" placeholder="Type anything — e.g. chicken, rice, eggs..." style="width:auto;flex:1;min-width:220px;">
+            <button class="btn small" id="pantryAddBtn" type="button">Add</button>
+          </div>
+          <p class="hint" style="margin-top:10px;">
+            Or tap the common ingredients below.
+            <label style="cursor:pointer;display:inline-block;margin-left:6px;"><input type="checkbox" id="pantryStaples" checked style="accent-color:var(--orange);vertical-align:-2px;"> Assume I have basics (oil, salt, pepper, spices &amp; sauces)</label>
+          </p>
+        </div>
+      </div>
+      <div id="pantrySelected"></div>
+      <div id="pantryChips"></div>
+      <div id="pantryResults"></div>
+    </div>
+  </div>
+</section>
+
 <section class="method-sec" id="how">
   <div class="inner">
     <p class="sec-eyebrow">The Method</p>
@@ -939,6 +982,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session)=>{
   renderSavedPlansList();
   if(currentUser) restoreProfileOnce();
   render();
+  if(RECIPES.length) refreshPantryUI();
 });
 
 /* ---------- Recipe photography ----------
@@ -1181,7 +1225,9 @@ function collectProfile(){
     wkProtein: document.getElementById('wkProtein').value,
     wkBudget: document.getElementById('wkBudget').value,
     activeSlots: activeSlots.slice(),
-    preferredStore
+    preferredStore,
+    pantry: pantryItems.slice(),
+    pantryStaples: document.getElementById('pantryStaples').checked
   };
 }
 
@@ -1218,6 +1264,8 @@ function applyProfile(p){
       document.querySelectorAll('#chip-slots .chip').forEach(c=>c.classList.toggle('active', activeSlots.includes(c.dataset.val)));
     }
     if(p.preferredStore){ preferredStore = p.preferredStore; localStorage.setItem('mm_store', preferredStore); }
+    if(Array.isArray(p.pantry)) pantryItems = p.pantry.slice();
+    if(typeof p.pantryStaples === 'boolean') document.getElementById('pantryStaples').checked = p.pantryStaples;
   }catch(e){ console.error('applyProfile', e); }
 }
 
@@ -2364,6 +2412,117 @@ function renderWeekUI(){
 
 document.getElementById('buildWeekBtn').addEventListener('click', buildWeek);
 
+/* ---------- What can I cook? (pantry reverse-lookup) ----------
+   The user ticks or types what's in their kitchen; we score every recipe by
+   how many of its ingredients are covered. Matching is deliberately fuzzy
+   ("chicken" covers "chicken breast") and everyday staples can be assumed. */
+let pantryItems = [];   // normalised ingredient tokens the user has
+const PANTRY_STAPLES = ['oil','salt','pepper','herb','spice','seasoning','cinnamon','paprika','cumin','turmeric','oregano','thyme','rosemary','basil','chilli flake','chili flake','curry powder','garam masala','soy sauce','vinegar','honey','stock','lemon juice','lime juice','garlic powder','nutritional yeast'];
+
+function normIng(s){ return String(s).toLowerCase().replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim(); }
+function isStaple(name){ const n = normIng(name); return PANTRY_STAPLES.some(st=>n.includes(st)); }
+
+function pantryCovers(ingName){
+  const n = normIng(ingName);
+  const nWords = n.split(' ');
+  return pantryItems.some(p=>{
+    if(n.includes(p) || p.includes(n)) return true;
+    return p.split(' ').some(w=>w.length>3 && nWords.includes(w));
+  });
+}
+
+function togglePantryItem(key){
+  if(pantryItems.includes(key)) pantryItems = pantryItems.filter(x=>x!==key);
+  else pantryItems.push(key);
+  refreshPantryUI();
+  saveProfileSoon();
+}
+function clearPantry(){
+  pantryItems = [];
+  refreshPantryUI();
+  saveProfileSoon();
+}
+function addPantryFromInput(){
+  const input = document.getElementById('pantryInput');
+  const key = normIng(input.value);
+  if(key && !pantryItems.includes(key)) pantryItems.push(key);
+  input.value = '';
+  refreshPantryUI();
+  saveProfileSoon();
+}
+document.getElementById('pantryAddBtn').addEventListener('click', addPantryFromInput);
+document.getElementById('pantryInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addPantryFromInput(); } });
+document.getElementById('pantryStaples').addEventListener('change', ()=>{ renderPantryResults(); saveProfileSoon(); });
+
+function buildPantryChips(){
+  const counts = {};
+  RECIPES.forEach(r=>r.ing.forEach(([name])=>{
+    if(isStaple(name)) return;
+    const key = normIng(name);
+    if(!key) return;
+    if(!counts[key]) counts[key] = { display: name.toLowerCase(), n: 0 };
+    counts[key].n++;
+  }));
+  const top = Object.entries(counts).sort((a,b)=>b[1].n-a[1].n).slice(0,40);
+  const groups = {};
+  top.forEach(([key, v])=>{
+    const cat = categorize(v.display);
+    (groups[cat] = groups[cat]||[]).push({key, display:v.display});
+  });
+  const order = ['Protein','Carbs & bakery','Fruit & veg','Dairy & alternatives','Pantry & extras'];
+  document.getElementById('pantryChips').innerHTML = order.filter(c=>groups[c]).map(cat=>`
+    <div class="pantry-cat">
+      <h5>${cat}</h5>
+      <div class="chips">${groups[cat].map(it=>`<div class="chip ${pantryItems.includes(it.key)?'active':''}" onclick="togglePantryItem('${esc(it.key)}')">${it.display}</div>`).join('')}</div>
+    </div>`).join('');
+}
+
+function renderPantrySelected(){
+  const div = document.getElementById('pantrySelected');
+  if(!pantryItems.length){ div.innerHTML = ''; return; }
+  div.innerHTML = `<div class="field form-full" style="margin-top:4px;">
+    <label>Your kitchen (${pantryItems.length}) <a href="#" class="pantry-clear" onclick="clearPantry();return false;">clear all</a></label>
+    <div class="chips">${pantryItems.map(k=>`<div class="chip active" onclick="togglePantryItem('${esc(k)}')" title="Remove">${k} ✕</div>`).join('')}</div>
+  </div>`;
+}
+
+function renderPantryResults(){
+  const resDiv = document.getElementById('pantryResults');
+  if(!resDiv) return;
+  if(!pantryItems.length){
+    resDiv.innerHTML = `<div class="empty" style="margin-top:22px;">Tick or type what you've got — we'll show every recipe you can make right now, plus near-misses worth a small top-up shop.</div>`;
+    return;
+  }
+  const useStaples = document.getElementById('pantryStaples').checked;
+  const scored = RECIPES.map(r=>{
+    const need = r.ing.filter(([name])=>!(useStaples && isStaple(name)));
+    const missing = need.filter(([name])=>!pantryCovers(name)).map(([name])=>name);
+    return { r, total: need.length, have: need.length - missing.length, missing };
+  }).filter(x=>x.total>0 && x.have>0 && x.missing.length<=2);
+  scored.sort((a,b)=> a.missing.length - b.missing.length || (b.have/b.total) - (a.have/a.total));
+
+  const ready = scored.filter(x=>!x.missing.length);
+  const almost = scored.filter(x=>x.missing.length>0).slice(0,9);
+  const wrap = x => `<div class="pantry-hit">
+    <div class="pantry-hit-note ${x.missing.length?'':'ok'}">${x.missing.length ? 'Missing: ' + x.missing.join(', ') : '✓ You have everything'} · ${x.have}/${x.total} ingredients</div>
+    ${cardHTML(x.r, null, null, '')}
+  </div>`;
+
+  resDiv.innerHTML = `
+    <div class="results-head" style="margin-top:30px;"><h2>Ready to cook</h2><span class="results-count">${ready.length} recipe${ready.length!==1?'s':''}</span></div>
+    ${ready.length ? `<div class="cards">${ready.slice(0,12).map(wrap).join('')}</div>${ready.length>12?`<p class="hint" style="margin-top:10px;">+ ${ready.length-12} more — add or remove ingredients to narrow it down.</p>`:''}`
+      : `<div class="empty">Nothing fully covered yet — add a couple more ingredients, or check the near-misses below.</div>`}
+    <div class="results-head" style="margin-top:38px;"><h2>Almost there</h2><span class="results-count">missing 1–2 items</span></div>
+    ${almost.length ? `<div class="cards">${almost.map(wrap).join('')}</div>` : `<div class="empty">No near-misses yet.</div>`}
+  `;
+}
+
+function refreshPantryUI(){
+  buildPantryChips();
+  renderPantrySelected();
+  renderPantryResults();
+}
+
 /* ---------- Init ---------- */
 document.getElementById('results').innerHTML = '<div class="empty">Loading recipes…</div>';
 (async function init(){
@@ -2378,6 +2537,7 @@ document.getElementById('results').innerHTML = '<div class="empty">Loading recip
   renderSavedPlansList();
   restoreProfileOnce();
   render();
+  refreshPantryUI();
 })();
 </script>
 </body>
