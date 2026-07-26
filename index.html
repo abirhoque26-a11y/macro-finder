@@ -52,7 +52,9 @@ img{max-width:100%;}
 .auth-shelf{max-width:1220px;margin:0 auto;padding:0 28px;}
 .profile-edit-row{display:none;margin-top:18px;}
 .profile-edit-row.show{display:block;}
-.auth-card{background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:24px 26px;}
+.auth-card{background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:24px 26px;position:relative;scroll-margin-top:96px;}
+.auth-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:6px;border-radius:999px;}
+.auth-close:hover{background:var(--ink);color:var(--cream);}
 .auth-card h4{margin:0 0 6px;font-family:'Anton',sans-serif;font-size:20px;text-transform:uppercase;letter-spacing:.02em;}
 .auth-card .hint{margin:0 0 14px;}
 .auth-fields{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
@@ -495,6 +497,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
 <div class="auth-shelf">
   <div class="profile-edit-row" id="authRow">
     <div class="auth-card">
+      <button class="auth-close" type="button" onclick="closeAuthPanel()" aria-label="Close sign in">✕</button>
       <h4>Sign in or create a free account</h4>
       <p class="hint">Save your plans, favourites and cooking checklist — plus your goal, weight, targets and preferences are remembered automatically, so you never re-enter them. New here? Enter an email and password and hit <strong>Create account</strong> — it takes a few seconds. Next time, use <strong>Sign in</strong> with the same details.</p>
       <div class="auth-fields">
@@ -1027,8 +1030,18 @@ function updateAuthUI(){
   }
 }
 document.getElementById('showAuthBtn').addEventListener('click', ()=>{
-  document.getElementById('authRow').classList.toggle('show');
+  /* Always open (rather than toggle) and bring it into view — the form lives at
+     the top of the page, so from further down a plain toggle looked like the
+     button did nothing at all. */
+  const row = document.getElementById('authRow');
+  row.classList.add('show');
+  row.scrollIntoView({behavior:'smooth', block:'center'});
+  setTimeout(()=>document.getElementById('authEmail').focus({preventScroll:true}), 450);
 });
+function closeAuthPanel(){
+  document.getElementById('authRow').classList.remove('show');
+  document.getElementById('authMsg').textContent = '';
+}
 document.getElementById('authSignUpBtn').addEventListener('click', async ()=>{
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
@@ -1061,7 +1074,10 @@ document.getElementById('forgotPwLink').addEventListener('click', async (e)=>{
      under Authentication -> URL Configuration -> Redirect URLs. */
   const RESET_REDIRECT = 'https://www.macromastery.uk';
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: RESET_REDIRECT });
-  msg.textContent = error ? error.message : `Reset email sent to ${email} — check your inbox (and spam folder), click the link, and you'll come back here to set a new password.`;
+  /* Supabase deliberately reports success whether or not the address is
+     registered, so we must not claim an email was definitely sent. */
+  msg.textContent = error ? error.message
+    : `If an account exists for ${email}, a reset link is on its way — check your inbox and spam folder. Don't have an account yet? Use "Create account" above instead.`;
 });
 document.getElementById('setNewPwBtn').addEventListener('click', async ()=>{
   const pw = document.getElementById('newPassword').value;
