@@ -238,6 +238,11 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .day-meal-stats{display:block;font-family:'Oswald',sans-serif;font-size:10.5px;letter-spacing:.04em;color:var(--muted);margin-top:1px;}
 .day-meal .swap-btn{margin-top:0;flex-shrink:0;}
 .day-meal.search-hit{background:rgba(232,85,29,.1);outline:1.5px solid var(--orange);outline-offset:-1.5px;}
+.customize-btn{background:var(--card);border:1.5px solid var(--ink);color:var(--ink);font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:9px 20px;border-radius:999px;cursor:pointer;}
+.customize-btn:hover{background:var(--ink);color:var(--cream);}
+.customize-btn.active{background:var(--orange);border-color:var(--orange);color:#FFF6ED;}
+.meal-pick{display:block;width:100%;max-width:100%;margin-top:6px;background:var(--card);border:1.5px solid var(--line-strong);color:var(--ink);padding:7px 9px;border-radius:5px;font-family:'Work Sans',sans-serif;font-size:12px;cursor:pointer;}
+.meal-pick:focus{outline:2px solid var(--orange);outline-offset:1px;}
 
 /* shopping list controls */
 .shop-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
@@ -554,7 +559,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       <div class="wizard-step" data-step="2">
         <div class="wizard-head">
           <h3>Which meal are you planning?</h3>
-          <p>Or search for something specific by name or ingredient.</p>
+          <p>Looking for something specific? There's a recipe search in the results section below.</p>
         </div>
         <div class="form-grid">
           <div class="field form-full">
@@ -565,10 +570,6 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
               <button data-val="snack">Snack</button>
               <button data-val="shake">Shake</button>
             </div>
-          </div>
-          <div class="field form-full">
-            <label>Search recipes <span class="badge optional">Optional</span></label>
-            <input type="text" id="recipeSearch" placeholder="Search by name or ingredient — e.g. salmon, chicken, tofu...">
           </div>
         </div>
         <div class="wizard-nav">
@@ -615,7 +616,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
               <option value="tofu">Tofu</option>
               <option value="plant">Other plant protein (beans/lentils)</option>
             </select>
-            <p class="hint">Mainly useful for lunch and dinner.</p>
+            <p class="hint">Mainly useful for lunch and dinner. In single-meal matches this is a strict filter; in the 7-day plan most meals will use it, with a little variety from other sources.</p>
           </div>
           <div class="field">
             <label>Preferred carb source <span class="badge optional">Optional</span></label>
@@ -630,7 +631,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
               <option value="oats">Oats</option>
               <option value="none">None / low-carb</option>
             </select>
-            <p class="hint">Mainly useful for lunch and dinner.</p>
+            <p class="hint">Mainly useful for lunch and dinner. Works the same way as protein source — strict for single meals, majority-but-not-all in the weekly plan.</p>
           </div>
           <div class="field form-full">
             <label>Cooking skill <span class="badge optional">Optional</span></label>
@@ -675,6 +676,14 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
             <p class="hint">Rough guide: 0.4–0.6g per kg of bodyweight per meal.</p>
           </div>
           <div class="field">
+            <label>Scale portions to hit <span class="badge optional">Optional</span></label>
+            <div class="seg" id="seg-scale">
+              <button data-val="calories" class="active">Calorie target</button>
+              <button data-val="protein">Protein target</button>
+            </div>
+            <p class="hint">When a recipe's portion is scaled up or down, it matches one target exactly — the other may drift slightly.</p>
+          </div>
+          <div class="field">
             <label>Budget (£) <span class="badge optional">Optional</span></label>
             <input type="number" id="budget" placeholder="e.g. £3–5 per meal" step="0.10">
             <p class="hint">Leave blank for no limit. A typical home-cooked meal costs £2–5.</p>
@@ -703,6 +712,10 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
         <div id="labelWrap"></div>
       </div>
       <div class="pantry-main">
+        <div class="field" style="margin-bottom:20px;">
+          <label>Search recipes <span class="badge optional">Optional</span></label>
+          <input type="text" id="recipeSearch" placeholder="Search by name or ingredient — e.g. salmon, chicken, tofu...">
+        </div>
         <div class="results-head">
           <h2>Matches</h2>
           <span class="results-count" id="resCount">—</span>
@@ -1158,6 +1171,7 @@ function collectProfile(){
   return {
     goal: state.goal, diet: state.diet.slice(), skill: state.skill, pp: state.pp,
     proteinPref: state.proteinPref, carbPref: state.carbPref,
+    scalePriority: state.scalePriority,
     height: document.getElementById('height').value,
     weight: document.getElementById('weight').value,
     cal: document.getElementById('cal').value,
@@ -1195,6 +1209,7 @@ function applyProfile(p){
     if(p.pp){ state.pp = p.pp; document.querySelectorAll('#seg-pp button').forEach(b=>b.classList.toggle('active', b.dataset.val===p.pp)); }
     if(p.proteinPref){ state.proteinPref = p.proteinPref; document.getElementById('sel-protein').value = p.proteinPref; }
     if(p.carbPref){ state.carbPref = p.carbPref; document.getElementById('sel-carb').value = p.carbPref; }
+    if(p.scalePriority){ state.scalePriority = p.scalePriority; document.querySelectorAll('#seg-scale button').forEach(b=>b.classList.toggle('active', b.dataset.val===p.scalePriority)); }
     ['height','weight','cal','protein','budget','wkCal','wkProtein','wkBudget'].forEach(id=>{
       if(p[id]) document.getElementById(id).value = p[id];
     });
@@ -1241,7 +1256,7 @@ async function loadRecipesFromDB(){
 }
 
 /* ---------- State ---------- */
-let state = { goal:"deficit", meal:"breakfast", diet:[], skill:"any", pp:"any", proteinPref:"any", carbPref:"any", favOnly:false };
+let state = { goal:"deficit", meal:"breakfast", diet:[], skill:"any", pp:"any", proteinPref:"any", carbPref:"any", favOnly:false, scalePriority:"calories" };
 let favourites = [];
 let progress = {};
 let savedPlans = {};
@@ -1251,6 +1266,7 @@ let activeSlots = ['breakfast','lunch','dinner','snack'];
 let cardCounter = 0;
 let planSearchQuery = '';
 let weekViewMode = 'cards';                                        // 'cards' | 'table'
+let weekCustomize = false;                                         // customise mode: pick any meal from a dropdown
 let preferredStore = localStorage.getItem('mm_store') || 'all';    // shopping list retailer
 let shopTicks = {};                                                // ingredient -> got it / already have it
 let lastShopList = null;                                           // snapshot for the print view
@@ -1467,6 +1483,10 @@ document.querySelectorAll('#seg-pp button').forEach(b=>b.addEventListener('click
   document.querySelectorAll('#seg-pp button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active'); state.pp=b.dataset.val; render();
 }));
+document.querySelectorAll('#seg-scale button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#seg-scale button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); state.scalePriority=b.dataset.val; render();
+}));
 document.querySelectorAll('#chip-diet .chip').forEach(c=>c.addEventListener('click',()=>{
   c.classList.toggle('active');
   const v=c.dataset.val;
@@ -1494,6 +1514,7 @@ function renderLabel(cal,protein,h,w,budget){
     <div class="servline"><span>Phase</span><span>${state.goal}</span></div>
     <div class="label-row thick"><span>Calories</span><span class="num">${cal||'—'} kcal</span></div>
     <div class="label-row"><span>Protein</span><span class="num">${protein||'—'} g</span></div>
+    <div class="label-row"><span>Scaling hits</span><span class="num">${state.scalePriority} first</span></div>
     <div class="label-row"><span>Budget</span><span class="num">${budget?('£'+budget.toFixed(2)):'no limit set'}</span></div>
     <div class="label-row"><span>Skill</span><span class="num">${state.skill}</span></div>
     <div class="label-row"><span>Protein powder</span><span class="num">${state.pp==='no'?'not allowed':state.pp==='only'?'preferred':'no preference'}</span></div>
@@ -1511,8 +1532,12 @@ function passesFilters(r, opts){
   if(state.skill!=='any' && r.skill!==state.skill) return false;
   if(state.pp==='no' && r.pp) return false;
   if(state.pp==='only' && !r.pp) return false;
-  if(state.proteinPref!=='any' && r.proteinSource!==state.proteinPref) return false;
-  if(state.carbPref!=='any' && r.carbSource!==state.carbPref) return false;
+  // softSources: keep non-preferred protein/carb sources in the pool (the week
+  // builder ranks preferred ones higher instead of excluding the rest outright)
+  if(!opts.softSources){
+    if(state.proteinPref!=='any' && r.proteinSource!==state.proteinPref) return false;
+    if(state.carbPref!=='any' && r.carbSource!==state.carbPref) return false;
+  }
   if(!opts.skipFav && state.favOnly && !favourites.includes(r.name)) return false;
   return true;
 }
@@ -1708,10 +1733,14 @@ function render(){
 
   let pool = RECIPES.filter(r=>r.meal===state.meal && passesFilters(r) && matchesSearch(r, searchQ));
 
-  // Fix 1: portion scaling — scale recipe macros/price to match calorie target
+  // Portion scaling — scale recipe macros/price to hit whichever target the
+  // user prioritised (calories by default, protein if they chose it).
   const scaledPool = pool.map(r=>{
-    if(!cal || r.cal <= 0) return {...r, scaleFactor:1};
-    const factor = Math.min(Math.max(cal / r.cal, 0.5), 3.0);
+    let base = null, targetLabel = 'calorie';
+    if(state.scalePriority === 'protein' && protein && r.protein > 0){ base = protein / r.protein; targetLabel = 'protein'; }
+    else if(cal && r.cal > 0){ base = cal / r.cal; }
+    if(base === null) return {...r, scaleFactor:1};
+    const factor = Math.min(Math.max(base, 0.5), 3.0);
     const roundF = (n) => Math.round(n * factor);
     return {
       ...r,
@@ -1719,7 +1748,7 @@ function render(){
       protein: roundF(r.protein),
       price: parseFloat((r.price * factor).toFixed(2)),
       scaleFactor: factor,
-      scaleNote: factor !== 1 ? `Portions ${factor > 1 ? 'scaled up' : 'scaled down'} ${Math.round(factor*100)}% to match your calorie target` : null
+      scaleNote: factor !== 1 ? `Portions ${factor > 1 ? 'scaled up' : 'scaled down'} ${Math.round(factor*100)}% to hit your ${targetLabel} target` : null
     };
   });
 
@@ -1864,8 +1893,17 @@ function buildWeek(){
   activeSlots.forEach(slot=>{
     const targetCal = dailyCal * (SLOT_PROPORTIONS[slot]/totalProp);
     const targetProtein = dailyProtein * (SLOT_PROPORTIONS[slot]/totalProp);
-    let pool = RECIPES.filter(r=>r.meal===slot && passesFilters(r, {skipFav:true}));
-    pool = pool.map(r=>({...r, score:phaseAdjustedScore(r,targetCal,targetProtein)}));
+    let pool = RECIPES.filter(r=>r.meal===slot && passesFilters(r, {skipFav:true, softSources:true}));
+    // Preferred protein/carb sources are a strong preference in the week plan,
+    // not a hard rule: non-preferred recipes get a score penalty, so most meals
+    // use your preferred sources but a close-matching alternative can still
+    // make the rotation for variety.
+    pool = pool.map(r=>{
+      let score = phaseAdjustedScore(r,targetCal,targetProtein);
+      if(state.proteinPref!=='any' && r.proteinSource!==state.proteinPref) score += 260;
+      if(state.carbPref!=='any' && r.carbSource!==state.carbPref) score += 160;
+      return {...r, score};
+    });
     pool.sort((a,b)=>a.score-b.score);
     candidatesBySlot[slot] = { list: pool.slice(0,8), targetCal, targetProtein };
   });
@@ -1889,6 +1927,20 @@ function weekSwap(di, slot){
   const list = weekState.candidatesBySlot[slot].list;
   if(!list.length) return;
   weekState.planIndex[di][slot] = (weekState.planIndex[di][slot] + 1) % list.length;
+  renderWeekUI();
+}
+
+/* Customise mode: every meal becomes a dropdown of its close-match candidates,
+   so you can pick exactly what you want instead of cycling with swap. */
+function setWeekCustomize(on){
+  weekCustomize = on;
+  renderWeekUI();
+}
+function pickMeal(di, slot, idx){
+  const list = weekState.candidatesBySlot[slot].list;
+  idx = parseInt(idx);
+  if(!list.length || isNaN(idx) || idx < 0 || idx >= list.length) return;
+  weekState.planIndex[di][slot] = idx;
   renderWeekUI();
 }
 
@@ -2192,7 +2244,12 @@ function renderWeekUI(){
       dayPlan[slot] = r;
       rowCal+=r.cal; rowProtein+=r.protein; rowCost+=r.price;
       const swapBtn = cands.length>1 ? `<button class="swap-btn" onclick="weekSwap(${di},'${slot}')" title="Swap for another close match" type="button">⟳ swap</button>` : '';
-      cells += `<td class="slot-cell" data-di="${di}" data-slot="${slot}"><span class="rname">${r.name}</span><span class="rmacro">${r.cal}kcal · ${r.protein}g · £${r.price.toFixed(2)}</span>${swapBtn}</td>`;
+      const pickHTML = (weekCustomize && cands.length>1)
+        ? `<select class="meal-pick" onchange="pickMeal(${di},'${slot}',this.value)" aria-label="Choose ${slot} for ${day}">
+            ${cands.map((c,i)=>`<option value="${i}" ${i===idx?'selected':''}>${c.name} · ${c.cal} kcal · £${c.price.toFixed(2)}</option>`).join('')}
+          </select>`
+        : '';
+      cells += `<td class="slot-cell" data-di="${di}" data-slot="${slot}"><span class="rname">${r.name}</span><span class="rmacro">${r.cal}kcal · ${r.protein}g · £${r.price.toFixed(2)}</span>${pickHTML || swapBtn}</td>`;
       meals += `
       <div class="day-meal" data-di="${di}" data-slot="${slot}">
         <img class="day-meal-img" src="${foodImg(r)}" alt="" loading="lazy">
@@ -2200,8 +2257,9 @@ function renderWeekUI(){
           <span class="day-meal-slot slot-${slot}">${slot}</span>
           <span class="day-meal-name rname">${r.name}</span>
           <span class="day-meal-stats">${r.cal} kcal · ${r.protein}g protein · £${r.price.toFixed(2)}</span>
+          ${pickHTML}
         </div>
-        ${swapBtn}
+        ${weekCustomize ? '' : swapBtn}
       </div>`;
     });
     planMatrix.push(dayPlan);
@@ -2283,7 +2341,9 @@ function renderWeekUI(){
         <button class="${weekViewMode==='cards'?'active':''}" onclick="setWeekView('cards')" type="button">Day cards</button>
         <button class="${weekViewMode==='table'?'active':''}" onclick="setWeekView('table')" type="button">Table</button>
       </div>
+      <button class="customize-btn ${weekCustomize?'active':''}" onclick="setWeekCustomize(${weekCustomize?'false':'true'})" type="button">${weekCustomize ? '✓ Done customising' : '🎛 Customise meals'}</button>
     </div>
+    ${weekCustomize ? `<p class="hint" style="margin-top:10px;">Pick exactly what you want for any meal from its dropdown — every option respects your filters and is a close macro match. Hit "Done customising" when you're happy.</p>` : ''}
     ${planViewHTML}
     <div class="week-summary">
       <div><span class="n">£${weeklyCost.toFixed(2)}</span>Estimated weekly cost</div>
