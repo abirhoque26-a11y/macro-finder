@@ -907,7 +907,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
           <li><strong>Ingredient weights are raw/uncooked</strong> unless the ingredient itself says otherwise (e.g. "cooked rice").</li>
           <li><strong>Serving sizes</strong> are one serving per recipe, automatically scaled up or down to match your calorie target (never below half or above triple the base portion).</li>
           <li><strong>Prices</strong> are rough per-serving estimates for UK supermarkets, reviewed periodically — they vary by store, brand and season, so treat the weekly total as a ballpark.</li>
-          <li><strong>The supermarket comparison</strong> applies typical price differences between UK chains (discounters cheapest) to our estimates — it's a guide to relative cost between stores, not live pricing.</li>
+          <li><strong>The supermarket comparison</strong> adjusts each recipe's cost using typical UK price differences for the categories of ingredient it contains — so a produce-heavy week and a protein-powder-heavy week rank the stores differently. It is a guide to relative cost between chains, not live pricing, and it can't account for individual promotions or whether a particular store stocks every item.</li>
           <li><strong>Suggested targets</strong> from your weight are generic starting points with a floor of 1400 kcal/day — they are not personal advice.</li>
         </ul>
         <p style="margin:0;font-size:13px;color:var(--muted);">Macro Mastery is a planning tool, not medical or dietetic advice. If you have a medical condition, a history of disordered eating, or significant weight-change goals, please speak to a doctor or registered dietitian before changing your diet.</p>
@@ -2511,6 +2511,49 @@ const STORES = [
   { id:'lidl',  label:'Lidl' }
 ];
 
+/* ---------- Supermarket cost estimates ----------
+   Our recipe prices are a mid-market (Tesco-ish) baseline. Rather than scaling
+   that single number by one constant per store — which would rank the stores
+   identically no matter what you were cooking — each store gets a factor per
+   product category. Discounters are strongest on fresh produce and own-brand
+   staples and weakest on branded/specialist items (protein powder, sauces), so
+   a shake-heavy week genuinely narrows their lead and can change the winner.
+   These are typical UK price differences, not live prices. */
+const STORE_CATEGORY_FACTOR = {
+  aldi:  { 'Protein':0.88, 'Carbs & bakery':0.86, 'Fruit & veg':0.85, 'Dairy & alternatives':0.84, 'Pantry & extras':0.98 },
+  lidl:  { 'Protein':0.92, 'Carbs & bakery':0.83, 'Fruit & veg':0.82, 'Dairy & alternatives':0.88, 'Pantry & extras':0.94 },
+  asda:  { 'Protein':0.94, 'Carbs & bakery':0.93, 'Fruit & veg':0.95, 'Dairy & alternatives':0.92, 'Pantry & extras':0.93 },
+  tesco: { 'Protein':1.00, 'Carbs & bakery':1.00, 'Fruit & veg':1.00, 'Dairy & alternatives':1.00, 'Pantry & extras':1.00 },
+  sains: { 'Protein':1.06, 'Carbs & bakery':1.05, 'Fruit & veg':1.07, 'Dairy & alternatives':1.04, 'Pantry & extras':1.05 }
+};
+
+/* Blend a store's category factors according to what a recipe is actually made
+   of, then weight by that recipe's price. */
+function recipeStoreFactor(r, storeId){
+  const f = STORE_CATEGORY_FACTOR[storeId];
+  if(!f || !r.ing || !r.ing.length) return f ? f['Pantry & extras'] : 1;
+  let sum = 0;
+  r.ing.forEach(([name])=>{ sum += (f[categorize(name)] ?? f['Pantry & extras']); });
+  return sum / r.ing.length;
+}
+
+function storeTotals(planMatrix, slots, fallbackCost){
+  const out = {};
+  STORES.forEach(st=>{
+    let total = 0, counted = 0;
+    (planMatrix||[]).forEach(dayPlan=>{
+      slots.forEach(slot=>{
+        const r = dayPlan[slot];
+        if(!r) return;
+        total += r.price * recipeStoreFactor(r, st.id);
+        counted++;
+      });
+    });
+    out[st.id] = counted ? total : fallbackCost;
+  });
+  return out;
+}
+
 function setPreferredStore(id){
   preferredStore = id;
   localStorage.setItem('mm_store', id);
@@ -2588,16 +2631,29 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
   // mid-market baseline; these factors reflect typical relative price
   // differences between UK chains (discounters cheapest) — a guide to
   // relative cost, not live store prices.
-  const STORE_PRICE_FACTOR = { aldi:0.88, lidl:0.89, asda:0.94, tesco:1.00, sains:1.06 };
-  const cheapestId = STORES.reduce((best,st)=> STORE_PRICE_FACTOR[st.id] < STORE_PRICE_FACTOR[best] ? st.id : best, STORES[0].id);
+  const totals = storeTotals(planMatrix, slots, weeklyCost);
+  const lowest = Math.min(...Object.values(totals));
+  const dearest = Math.max(...Object.values(totals));
+  /* Our figures aren't precise enough to separate stores within a few percent
+     of each other — and in reality the discounters trade places month to month
+     — so anything inside 3% of the lowest is shown as a joint winner rather
+     than inventing a decisive gap. */
+  const TIE_BAND = 0.03;
+  const topGroup = STORES.filter(st=> totals[st.id] <= lowest * (1 + TIE_BAND)).map(st=>st.id);
+  const joint = topGroup.length > 1;
   const compareTiles = STORES.map(st=>{
-    const p = weeklyCost * STORE_PRICE_FACTOR[st.id];
-    return `<div class="sc-tile ${st.id===cheapestId?'cheapest':''} ${preferredStore===st.id?'active':''}" onclick="setPreferredStore('${st.id}')" role="button" tabindex="0" title="Set ${st.label} as your supermarket">
-      ${st.id===cheapestId?'<span class="sc-badge">Cheapest</span>':''}
+    const p = totals[st.id];
+    const isTop = topGroup.includes(st.id);
+    const saving = dearest - p;
+    return `<div class="sc-tile ${isTop?'cheapest':''} ${preferredStore===st.id?'active':''}" onclick="setPreferredStore('${st.id}')" role="button" tabindex="0" title="${st.label}: estimated £${p.toFixed(2)} for this week's list${saving>0.005?` — roughly £${saving.toFixed(2)} less than the priciest option here`:''}. Click to make it your default.">
+      ${isTop?`<span class="sc-badge">${joint?'Usually cheapest':'Est. cheapest'}</span>`:''}
       <span class="sc-name">${st.label}</span>
       <span class="sc-price">£${p.toFixed(2)}</span>
     </div>`;
   }).join('');
+  const tieNote = joint
+    ? `<p class="hint" style="margin:-6px 0 14px;">${topGroup.map(id=>(STORES.find(s=>s.id===id)||{}).label).join(' and ')} come out within a few percent of each other here — close enough that promotions and what each store actually stocks will matter more than the difference shown.</p>`
+    : '';
 
   return `
   <div class="shop-list">
@@ -2606,7 +2662,8 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
       <span class="results-count">£${weeklyCost.toFixed(2)} total</span>
     </div>
     <div class="store-compare">${compareTiles}</div>
-    <p class="hint" style="margin-bottom:14px;">Estimated weekly totals by supermarket, based on typical price differences between UK chains — a guide to relative cost, not live prices. Tap a store to make it your default.</p>
+    ${tieNote}
+    <p class="hint" style="margin-bottom:14px;"><strong>These are estimates, not live prices.</strong> We take each recipe's cost and adjust it using typical UK price differences for the kinds of ingredients it uses — discounters tend to win on fresh produce and staples, less so on branded items like protein powder. Use it to compare stores against each other, not as the price you'll actually pay. Tap a store to make it your default.</p>
     <div class="shop-controls">
       <select onchange="setPreferredStore(this.value)" aria-label="Preferred supermarket">${storeOptions}</select>
       <button class="pager-btn" onclick="printShoppingList()" type="button">🖨 Print list</button>
