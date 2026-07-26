@@ -72,6 +72,20 @@ img{max-width:100%;}
 .plans-empty{padding:6px 0 2px;}
 .plans-flash{outline:2.5px solid var(--orange);outline-offset:3px;border-radius:6px;}
 
+/* "Plan next week" returning-user card */
+.nextweek-card{display:none;background:var(--ink);color:var(--cream);border-radius:6px;padding:24px 26px;margin-top:18px;scroll-margin-top:90px;}
+.nextweek-card.show{display:block;}
+.nextweek-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.nextweek-card h4{margin:0 0 5px;font-family:'Anton',sans-serif;font-size:22px;text-transform:uppercase;letter-spacing:.02em;color:var(--cream);}
+.nextweek-card p{margin:0;font-size:13.5px;color:#B9B2A0;line-height:1.6;max-width:520px;}
+.nextweek-card .cta-orange{padding:14px 28px;font-size:12px;white-space:nowrap;}
+.cooked-meter{display:flex;gap:5px;margin-top:12px;}
+.cooked-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-size:9px;font-weight:600;letter-spacing:.04em;background:rgba(244,239,225,.12);color:#8B8471;}
+.cooked-dot.done{background:var(--herb);color:#F4EFE1;}
+.nextweek-changes{background:rgba(78,107,36,.12);border:1.5px solid var(--herb);border-radius:6px;padding:14px 18px;margin-top:16px;font-size:13px;color:#3F5A1C;}
+.nextweek-changes strong{font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.nextweek-changes ul{margin:0;padding-left:18px;line-height:1.75;}
+
 /* ---------- Hero ---------- */
 .hero-sec{padding:64px 0 60px;}
 .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;}
@@ -497,6 +511,17 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       <span class="hint" id="authMsg" style="display:block;margin-top:8px;"></span>
     </div>
   </div>
+  <div class="nextweek-card" id="nextWeekCard">
+    <div class="nextweek-top">
+      <div>
+        <h4>Ready for next week?</h4>
+        <p id="nextWeekBlurb">We'll reuse your targets and preferences, keep the meals you liked, and rotate in something different for the ones you didn't get round to cooking.</p>
+        <div class="cooked-meter" id="cookedMeter"></div>
+      </div>
+      <button class="cta-orange" id="planNextWeekBtn" type="button">Plan next week →</button>
+    </div>
+  </div>
+
   <details class="plans-card" id="myPlansSection">
     <summary class="plans-card-head">
       <h4>My saved plans</h4>
@@ -1027,7 +1052,11 @@ document.getElementById('forgotPwLink').addEventListener('click', async (e)=>{
   const msg = document.getElementById('authMsg');
   if(!email){ msg.textContent = 'Type your email address in the box above first, then click "Forgot your password?" again.'; return; }
   msg.textContent = 'Sending reset email…';
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+  /* Always send people back to the live site — localhost/preview origins aren't
+     on Supabase's redirect allow-list, so they'd fail. This URL must be listed
+     under Authentication -> URL Configuration -> Redirect URLs. */
+  const RESET_REDIRECT = 'https://www.macromastery.uk';
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: RESET_REDIRECT });
   msg.textContent = error ? error.message : `Reset email sent to ${email} — check your inbox (and spam folder), click the link, and you'll come back here to set a new password.`;
 });
 document.getElementById('setNewPwBtn').addEventListener('click', async ()=>{
@@ -1054,7 +1083,8 @@ supabaseClient.auth.onAuthStateChange(async (event, session)=>{
   progress = currentUser ? await loadProgress() : {};
   savedPlans = currentUser ? await loadSavedPlans() : {};
   renderSavedPlansList();
-  if(currentUser) restoreProfileOnce();
+  if(currentUser){ restoreProfileOnce(); renderPinChips(); }
+  restoreLastWeek();
   render();
   if(RECIPES.length) refreshPantryUI();
 });
@@ -1403,6 +1433,148 @@ function applyProfile(p){
   }catch(e){ console.error('applyProfile', e); }
 }
 
+/* ---------- Weekly rollover: "Plan next week" ----------
+   Snapshots the built week plus which days actually got cooked, then uses that
+   next time round: meals you cooked (and anything favourited/pinned) stay,
+   meals you skipped get rotated out for something different. Stored as a
+   reserved "__lastweek" row alongside saved plans (same RLS), with a
+   localStorage fallback for guests. */
+const LASTWEEK_KEY = '__lastweek';
+let lastWeekSaveTimer = null;
+
+function snapshotLastWeek(){
+  if(!weekState.activeSlots || !weekState.activeSlots.length) return;
+  const meals = {};
+  DAYS.forEach((d, di)=>{
+    meals[di] = {};
+    weekState.activeSlots.forEach(s=>{
+      const list = weekState.candidatesBySlot[s].list;
+      if(list.length) meals[di][s] = list[weekState.planIndex[di][s]].name;
+    });
+  });
+  lastWeek = { savedAt: new Date().toISOString(), slots: weekState.activeSlots.slice(), meals, cooked: {...progress} };
+  clearTimeout(lastWeekSaveTimer);
+  lastWeekSaveTimer = setTimeout(async ()=>{
+    localStorage.setItem('mm_lastweek', JSON.stringify(lastWeek));
+    if(currentUser){
+      await supabaseClient.from('saved_plans').upsert(
+        { user_id: currentUser.id, name: LASTWEEK_KEY, config: lastWeek, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,name' }
+      );
+    }
+  }, 1500);
+  renderNextWeekCard();
+}
+
+function restoreLastWeek(){
+  const remote = currentUser ? savedPlans[LASTWEEK_KEY] : null;
+  let local = null;
+  try{ local = JSON.parse(localStorage.getItem('mm_lastweek') || 'null'); }catch(e){}
+  const w = remote || local;
+  if(w && w.meals && w.slots) lastWeek = w;
+  renderNextWeekCard();
+}
+
+/* Split last week's recipes into what got cooked vs skipped, based on which
+   days were ticked off. A recipe cooked on any day counts as cooked. */
+function lastWeekOutcome(){
+  const cooked = new Set(), skipped = new Set();
+  if(!lastWeek) return { cooked, skipped, daysCooked: 0 };
+  let daysCooked = 0;
+  DAYS.forEach((d, di)=>{
+    const dayCooked = !!(lastWeek.cooked||{})[d];
+    if(dayCooked) daysCooked++;
+    Object.values(lastWeek.meals[di] || {}).forEach(name=>{
+      (dayCooked ? cooked : skipped).add(name);
+    });
+  });
+  cooked.forEach(n=>skipped.delete(n));
+  return { cooked, skipped, daysCooked };
+}
+
+function renderNextWeekCard(){
+  const card = document.getElementById('nextWeekCard');
+  if(!card) return;
+  if(!lastWeek || !lastWeek.meals){ card.classList.remove('show'); return; }
+  card.classList.add('show');
+  const { daysCooked, skipped } = lastWeekOutcome();
+  const when = lastWeek.savedAt ? new Date(lastWeek.savedAt).toLocaleDateString() : null;
+  document.getElementById('cookedMeter').innerHTML = DAYS.map(d=>
+    `<span class="cooked-dot ${(lastWeek.cooked||{})[d]?'done':''}" title="${d}${(lastWeek.cooked||{})[d]?' — cooked':' — not ticked off'}">${d.slice(0,1)}</span>`
+  ).join('');
+  const blurb = document.getElementById('nextWeekBlurb');
+  if(daysCooked === 0){
+    blurb.textContent = `Your last plan${when?` (${when})`:''} is saved. Build next week from it — we'll keep your targets and preferences, and mix up the meals.`;
+  } else {
+    blurb.textContent = `You cooked ${daysCooked} of 7 days last time${when?`, planned ${when}`:''}. We'll keep the meals you cooked and your favourites, and rotate in something different for the ${skipped.size} you didn't get round to.`;
+  }
+}
+
+function planNextWeek(){
+  if(!lastWeek) return;
+  const { cooked, skipped } = lastWeekOutcome();
+  const prevMeals = lastWeek.meals || {};
+
+  document.getElementById('weekPanel').style.display = 'block';
+  // buildWeek() bails out (leaving the old weekState intact) if targets are
+  // missing, so check up front rather than silently rotating a stale week
+  if(!parseFloat(document.getElementById('wkCal').value) || !parseFloat(document.getElementById('wkProtein').value) || !activeSlots.length){
+    document.getElementById('weekPanel').scrollIntoView({behavior:'smooth', block:'start'});
+    showToast('Enter your daily calorie and protein goals first');
+    return;
+  }
+  buildWeek();
+  if(!weekState.activeSlots.length){
+    showToast('Set your daily targets first, then try again.');
+    return;
+  }
+
+  const rotated = [], kept = [];
+  DAYS.forEach((d, di)=>{
+    weekState.activeSlots.forEach(s=>{
+      const list = weekState.candidatesBySlot[s].list;
+      if(list.length < 2) return;
+      const idx = weekState.planIndex[di][s];
+      const cur = list[idx];
+      const prevName = (prevMeals[di] || {})[s];
+
+      // keep anything you pinned, favourited, or actually cooked
+      if(pinnedRecipes.includes(cur.name) || favourites.includes(cur.name) || cooked.has(cur.name)){
+        if(prevName === cur.name && kept.length < 3) kept.push(`${d} ${s}: ${cur.name}`);
+        return;
+      }
+      // rotate away from meals you skipped last week
+      if(skipped.has(cur.name)){
+        for(let step=1; step<list.length; step++){
+          const cand = list[(idx+step) % list.length];
+          if(!skipped.has(cand.name)){
+            weekState.planIndex[di][s] = (idx+step) % list.length;
+            rotated.push({ day:d, slot:s, from:cur.name, to:cand.name });
+            break;
+          }
+        }
+      }
+    });
+  });
+
+  // fresh week = fresh cooking checklist
+  resetProgress();
+
+  const lines = [];
+  kept.slice(0,2).forEach(k=>lines.push(`Kept <strong>${k.split(': ')[1]}</strong> (${k.split(':')[0].toLowerCase()}) — you cooked or favourited it`));
+  rotated.slice(0,3).forEach(r=>lines.push(`${r.day} ${r.slot}: swapped <strong>${r.from}</strong> for <strong>${r.to}</strong> — you didn't cook it last week`));
+  nextWeekMsg = lines.length
+    ? `<strong>What changed from last week</strong><ul>${lines.map(l=>`<li>${l}</li>`).join('')}</ul>`
+    : `<strong>Next week is ready</strong><ul><li>Your targets and preferences carried over. Nothing needed rotating — you cooked everything last week.</li></ul>`;
+
+  renderWeekUI();
+  // re-snapshot: buildWeek captured the pre-rotation meals and last week's ticks
+  snapshotLastWeek();
+  showToast(rotated.length ? `Next week ready — ${rotated.length} meal${rotated.length!==1?'s':''} rotated` : 'Next week ready');
+  document.getElementById('weekPanel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+document.getElementById('planNextWeekBtn').addEventListener('click', planNextWeek);
+
 function restoreProfileOnce(){
   if(profileApplied) return;
   const remote = currentUser ? savedPlans[PROFILE_KEY] : null;
@@ -1440,6 +1612,8 @@ async function loadRecipesFromDB(){
 /* ---------- State ---------- */
 let state = { goal:"deficit", meal:"breakfast", diet:[], skill:"any", pp:"any", proteinPref:"any", carbPref:"any", favOnly:false, scalePriority:"calories", quickOnly:false, freezerOnly:false };
 let pinnedRecipes = [];   // must-have recipes guaranteed a spot in the week plan
+let lastWeek = null;      // snapshot of the previous week's meals + which days were cooked
+let nextWeekMsg = '';     // "what changed and why" summary after a rollover
 let favourites = [];
 let progress = {};
 let savedPlans = {};
@@ -1523,7 +1697,7 @@ async function toggleProgress(day, checked){
   if(currentUser){
     await supabaseClient.from('progress').upsert({ user_id: currentUser.id, day, done: checked, updated_at: new Date().toISOString() });
   }
-  if(weekState.activeSlots.length) renderWeekUI();
+  if(weekState.activeSlots.length){ renderWeekUI(); snapshotLastWeek(); }
 }
 async function resetProgress(){
   progress = {};
@@ -2203,6 +2377,7 @@ function buildWeek(){
   weekState = { candidatesBySlot, planIndex, activeSlots: activeSlots.slice(), weeklyBudget, pinNote };
   renderWeekUI();
   saveProfileSoon();
+  snapshotLastWeek();
 }
 
 function weekSwap(di, slot){
@@ -2670,6 +2845,7 @@ function renderWeekUI(){
       <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.cal,0)/7)}</span>Avg daily kcal</div>
       <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.protein,0)/7)}g</span>Avg daily protein</div>
     </div>
+    ${nextWeekMsg ? `<div class="nextweek-changes">${nextWeekMsg}</div>` : ''}
     ${balanceHTML}
     ${autoSwapMsg ? `<div class="autoswap-note">✓ ${autoSwapMsg}</div>` : ''}
     ${budgetSuggestHTML}
@@ -2682,7 +2858,7 @@ function renderWeekUI(){
   applyPlanSearchHighlight();
 }
 
-document.getElementById('buildWeekBtn').addEventListener('click', buildWeek);
+document.getElementById('buildWeekBtn').addEventListener('click', ()=>{ nextWeekMsg = ''; buildWeek(); });
 
 /* ---------- What can I cook? (pantry reverse-lookup) ----------
    The user ticks or types what's in their kitchen; we score every recipe by
@@ -2808,6 +2984,7 @@ document.getElementById('results').innerHTML = '<div class="empty">Loading recip
   savedPlans = currentUser ? await loadSavedPlans() : {};
   renderSavedPlansList();
   restoreProfileOnce();
+  restoreLastWeek();
   document.getElementById('recipeNameList').innerHTML = RECIPES.map(r=>`<option value="${r.name.replace(/"/g,'&quot;')}">`).join('');
   renderPinChips();
   render();
