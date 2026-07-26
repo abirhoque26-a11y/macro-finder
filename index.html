@@ -307,6 +307,18 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .sc-price{display:block;font-family:'Anton',sans-serif;font-size:19px;color:var(--ink);margin-top:3px;}
 .sc-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--herb);color:#F4EFE1;font-family:'Oswald',sans-serif;font-weight:600;font-size:7.5px;letter-spacing:.14em;text-transform:uppercase;padding:2px 8px;border-radius:999px;white-space:nowrap;}
 
+/* coach summary — the "here's your week" moment */
+.coach-panel{background:var(--ink);color:var(--cream);border-radius:8px;padding:26px 30px;margin-top:24px;}
+.coach-panel h3{margin:0 0 12px;font-family:'Anton',sans-serif;font-size:24px;text-transform:uppercase;letter-spacing:.02em;color:var(--cream);}
+.coach-panel p{margin:0;font-size:15.5px;line-height:1.75;color:#DDD7C6;max-width:660px;}
+.coach-panel strong{color:var(--cream);font-weight:600;}
+.coach-panel .good{color:var(--gold);font-weight:600;}
+.coach-stats{display:flex;gap:28px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid #33312B;}
+.coach-stat{font-family:'Oswald',sans-serif;font-weight:600;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8B8471;}
+.coach-stat b{display:block;font-family:'Anton',sans-serif;font-weight:400;font-size:26px;letter-spacing:.01em;color:var(--cream);margin-bottom:2px;}
+.coach-stat b.gold{color:var(--gold);}
+.coach-stat b.orange{color:var(--orange);}
+
 /* week balance check */
 .balance-note{background:rgba(217,180,74,.16);border:1.5px solid var(--gold);border-radius:6px;padding:14px 18px;margin-top:16px;font-size:13px;color:#5B4A10;}
 .balance-note strong{font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.08em;text-transform:uppercase;}
@@ -1522,11 +1534,27 @@ function renderNextWeekCard(){
   document.getElementById('cookedMeter').innerHTML = DAYS.map(d=>
     `<span class="cooked-dot ${(lastWeek.cooked||{})[d]?'done':''}" title="${d}${(lastWeek.cooked||{})[d]?' — cooked':' — not ticked off'}">${d.slice(0,1)}</span>`
   ).join('');
+  /* Warm, but every claim here is a real fact from the saved week. We
+     deliberately celebrate cooking and planning — never calorie adherence. */
+  const heading = document.querySelector('#nextWeekCard h4');
   const blurb = document.getElementById('nextWeekBlurb');
+  const mealsCooked = daysCooked * (lastWeek.slots ? lastWeek.slots.length : 0);
   if(daysCooked === 0){
-    blurb.textContent = `Your last plan${when?` (${when})`:''} is saved. Build next week from it — we'll keep your targets and preferences, and mix up the meals.`;
+    heading.textContent = 'Welcome back';
+    blurb.textContent = `Your last plan${when?` from ${when}`:''} is saved and ready. Build next week from it — we'll keep your targets and preferences, and mix up the meals so it doesn't get repetitive.`;
   } else {
-    blurb.textContent = `You cooked ${daysCooked} of 7 days last time${when?`, planned ${when}`:''}. We'll keep the meals you cooked and your favourites, and rotate in something different for the ${skipped.size} you didn't get round to.`;
+    // "meals" counts slots cooked; "recipes" counts distinct dishes skipped —
+    // name both units so the two numbers don't look like they should add up
+    const rotateBit = skipped.size
+      ? ` We'll keep what you cooked and your favourites, and swap in something different for the ${skipped.size} recipe${skipped.size!==1?'s':''} you didn't get round to.`
+      : ` You got to everything — we'll keep your favourites and bring in some new ideas for variety.`;
+    if(daysCooked >= 5){
+      heading.textContent = `Welcome back — ${daysCooked} days cooked`;
+      blurb.textContent = `That's ${mealsCooked} home-made meals last week. Nice going.` + rotateBit;
+    } else {
+      heading.textContent = 'Welcome back';
+      blurb.textContent = `You cooked on ${daysCooked} day${daysCooked!==1?'s':''} last week — that's ${mealsCooked} home-made meal${mealsCooked!==1?'s':''}.` + rotateBit;
+    }
   }
 }
 
@@ -1647,6 +1675,7 @@ let weekCustomize = false;                                         // customise 
 let preferredStore = localStorage.getItem('mm_store') || 'all';    // shopping list retailer
 let shopTicks = {};                                                // ingredient -> got it / already have it
 let lastShopList = null;                                           // snapshot for the print view
+let lastShopItemCount = 0;                                         // distinct items on the shopping list
 
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 const SLOT_PROPORTIONS = { breakfast:0.22, lunch:0.27, dinner:0.31, snack:0.10, shake:0.10 };
@@ -2588,6 +2617,8 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
 
   const catOrder = ['Protein','Carbs & bakery','Fruit & veg','Dairy & alternatives','Pantry & extras'];
   lastShopList = { sections: [], weeklyCost };
+  // how many distinct things you actually have to buy — used by the coach summary
+  lastShopItemCount = Object.keys(map).length;
   let sections = '';
   catOrder.forEach(cat=>{
     if(!cats[cat] || !cats[cat].length) return;
@@ -2786,6 +2817,51 @@ function setWeekView(v){
   renderWeekUI();
 }
 
+/* ---------- Coach summary ----------
+   Reads back the week that was just built in plain English. Every number here
+   is computed from the actual plan — nothing is estimated or invented. Framed
+   around what you'll cook and buy, not around restriction. */
+function buildCoachSummary(dayTotals, weeklyCost, weeklyBudget){
+  const avgCal = Math.round(dayTotals.reduce((s,d)=>s+d.cal,0)/7);
+  const avgProtein = Math.round(dayTotals.reduce((s,d)=>s+d.protein,0)/7);
+  const targetCal = parseFloat(document.getElementById('wkCal').value);
+  const targetProtein = parseFloat(document.getElementById('wkProtein').value);
+  const proteinDays = targetProtein ? dayTotals.filter(d=>d.protein >= targetProtein).length : null;
+
+  const bits = [];
+  bits.push(`You'll average <strong>${avgCal} kcal</strong> and <strong>${avgProtein}g of protein</strong> a day.`);
+  if(proteinDays !== null){
+    bits.push(proteinDays === 7
+      ? `That hits your protein target <span class="good">every day this week</span>.`
+      : `That meets your ${targetProtein}g protein target on <strong>${proteinDays} of 7 days</strong>.`);
+  }
+  const costBit = `The whole week comes to <strong>£${weeklyCost.toFixed(2)}</strong>`;
+  if(weeklyBudget && weeklyCost <= weeklyBudget){
+    bits.push(`${costBit} — <span class="good">£${(weeklyBudget-weeklyCost).toFixed(2)} under your budget</span>.`);
+  } else if(weeklyBudget){
+    bits.push(`${costBit}, which is £${(weeklyCost-weeklyBudget).toFixed(2)} over your £${weeklyBudget.toFixed(2)} budget — there are swap suggestions below.`);
+  } else {
+    bits.push(`${costBit}, about £${(weeklyCost/7).toFixed(2)} a day.`);
+  }
+  if(lastShopItemCount){
+    bits.push(`And you only need <strong>${lastShopItemCount} different ingredients</strong> to cook all of it.`);
+  }
+
+  const heading = lastWeek && lastWeek.meals ? 'Your week is ready' : 'Here\'s your first week';
+  return `
+  <div class="coach-panel">
+    <h3>${heading}</h3>
+    <p>${bits.join(' ')}</p>
+    <div class="coach-stats">
+      <span class="coach-stat"><b>${avgCal}</b>kcal / day</span>
+      <span class="coach-stat"><b class="gold">${avgProtein}g</b>protein / day</span>
+      <span class="coach-stat"><b class="orange">£${weeklyCost.toFixed(2)}</b>for the week</span>
+      ${lastShopItemCount ? `<span class="coach-stat"><b>${lastShopItemCount}</b>ingredients to buy</span>` : ''}
+      ${proteinDays !== null ? `<span class="coach-stat"><b>${proteinDays}/7</b>days on protein</span>` : ''}
+    </div>
+  </div>`;
+}
+
 function renderWeekUI(){
   const ws = weekState;
   if(!ws.activeSlots || !ws.activeSlots.length) return;
@@ -2928,6 +3004,7 @@ function renderWeekUI(){
     : `<div class="week-cards">${dayCards}</div>`;
 
   document.getElementById('weekResults').innerHTML = `
+    ${buildCoachSummary(dayTotals, weeklyCost, ws.weeklyBudget)}
     <div class="week-toolbar">
       <div class="view-toggle">
         <button class="${weekViewMode==='cards'?'active':''}" onclick="setWeekView('cards')" type="button">Day cards</button>
