@@ -299,7 +299,10 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .shop-item-body{flex:1;min-width:0;}
 
 /* quick / advanced plan mode */
-.mode-toggle{display:flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;width:fit-content;margin-bottom:24px;}
+.mode-ask{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;}
+.mode-explain{font-size:14px;line-height:1.65;color:#4A4638;margin:0 0 24px;max-width:600px;}
+.mode-explain strong{font-weight:700;color:var(--ink);}
+.mode-toggle{display:flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;width:fit-content;margin-bottom:14px;}
 .mode-toggle button{background:var(--card);border:none;color:var(--muted);font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:11px 26px;cursor:pointer;}
 .mode-toggle button.active{background:var(--orange);color:#FFF6ED;}
 .quick-only{display:none;}
@@ -657,13 +660,15 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
 <section class="planner-sec" id="planner">
   <div class="inner">
     <p class="sec-eyebrow">The Planner</p>
-    <h2 class="sec-title">Four steps.<br><span class="accent">One week of food.</span></h2>
+    <h2 class="sec-title" id="plannerTitle">One week.<br><span class="accent">Planned in a minute.</span></h2>
 
     <div class="form-panel" id="wizardPanel">
+      <p class="mode-ask">What do you want to do?</p>
       <div class="mode-toggle" id="modeToggle">
-        <button data-mode="quick" type="button">⚡ Quick plan</button>
-        <button data-mode="advanced" class="active" type="button">Advanced</button>
+        <button data-mode="quick" class="active" type="button">Plan my whole week</button>
+        <button data-mode="advanced" type="button">Find one meal</button>
       </div>
+      <p class="mode-explain" id="modeExplain"></p>
       <div class="wizard-progress">
         <div class="wp current" data-step="1"></div>
         <div class="wp" data-step="2"></div>
@@ -686,21 +691,42 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
             </div>
           </div>
           <div class="field">
+            <label>Weight (kg) <span class="badge advised">Advised</span></label>
+            <input type="number" id="weight" placeholder="72">
+          </div>
+          <div class="field">
             <label>Height (cm) <span class="badge optional">Optional</span></label>
             <input type="number" id="height" placeholder="175">
           </div>
           <div class="field">
-            <label>Weight (kg) <span class="badge optional">Optional</span></label>
-            <input type="number" id="weight" placeholder="72">
+            <label>Age <span class="badge optional">Optional</span></label>
+            <input type="number" id="age" placeholder="28">
           </div>
-          <div class="field form-full adv-only" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-            <button class="btn secondary small" id="suggestBtn" type="button">✦ Suggest targets from my weight</button>
-            <span class="hint" id="suggestMsg" style="margin:0;"></span>
+          <div class="field">
+            <label>Sex <span class="badge optional">Optional</span></label>
+            <select class="sel" id="calcSex">
+              <option value="">Prefer not to say</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          <div class="field form-full">
+            <label>How active are you? <span class="badge optional">Optional</span></label>
+            <select class="sel" id="calcActivity">
+              <option value="sedentary">Sedentary — desk job, little exercise</option>
+              <option value="light" selected>Lightly active — 1-3 workouts a week</option>
+              <option value="moderate">Moderately active — 3-5 workouts a week</option>
+              <option value="active">Very active — 6+ workouts, or a physical job</option>
+            </select>
+          </div>
+          <div class="field form-full" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <button class="btn secondary small" id="suggestBtn" type="button">✦ Work out my targets</button>
+            <span class="hint" id="suggestMsg" style="margin:0;max-width:520px;">Fill in what you know and we'll estimate your daily calories and protein. Weight alone is enough; adding height, age and sex makes it more accurate.</span>
           </div>
         </div>
         <div class="quick-only">
-          <button class="btn" id="quickBuildBtn" type="button">⚡ Build my week for me →</button>
-          <span class="hint" id="quickMsg" style="margin:0;max-width:420px;">Pick a goal, enter your weight, and we'll set sensible calorie and protein targets and build your full week — you can tweak anything afterwards.</span>
+          <button class="btn" id="quickBuildBtn" type="button">Build my 7-day plan →</button>
+          <span class="hint" id="quickMsg" style="margin:0;max-width:460px;">Weight and goal are all we need. Press ✦ Work out my targets first if you want to see the numbers before we build, or go straight ahead and change them later.</span>
         </div>
         <div class="wizard-nav adv-only">
           <span class="wizard-count">Step 1 of 4</span>
@@ -1318,12 +1344,31 @@ document.getElementById('heroStartBtn').addEventListener('click', ()=>{
   document.getElementById('wizardPanel').scrollIntoView({behavior:'smooth', block:'start'});
 });
 
-/* ---------- Quick vs Advanced plan mode ----------
-   Quick: goal + weight → we set every target and build the full week in one click.
-   Advanced: the original four-step wizard with full control. */
+/* ---------- The two jobs this page does ----------
+   These were labelled "Quick plan" and "Advanced", which read as difficulty
+   settings for the same task. They are not: one builds a 7-day plan, the other
+   finds a single recipe. Labelling them by outcome — and saying plainly what you
+   get — is the whole point. The internal mode keys stay 'quick'/'advanced' so
+   existing CSS and saved state keep working.
+
+   quick    = Plan my whole week  -> targets, then straight to the 7-day plan
+   advanced = Find one meal       -> the four-step wizard, ending in matches */
+const MODE_COPY = {
+  quick: {
+    title: 'One week.<br><span class="accent">Planned in a minute.</span>',
+    explain: '<strong>You get a full 7-day plan</strong> — every meal chosen for your calorie and protein targets, plus one shopping list for the whole week. Set your targets below and we will build it. You can swap any meal afterwards.'
+  },
+  advanced: {
+    title: 'One meal.<br><span class="accent">Matched to your macros.</span>',
+    explain: '<strong>You get a list of single recipes</strong> that fit one meal — useful when you just want an idea for tonight\'s dinner rather than a whole week. Four short steps, then your matches appear below.'
+  }
+};
 function setPlanMode(mode){
   document.getElementById('wizardPanel').classList.toggle('quick', mode === 'quick');
   document.querySelectorAll('#modeToggle button').forEach(b=>b.classList.toggle('active', b.dataset.mode === mode));
+  const copy = MODE_COPY[mode] || MODE_COPY.quick;
+  document.getElementById('plannerTitle').innerHTML = copy.title;
+  document.getElementById('modeExplain').innerHTML = copy.explain;
   if(mode === 'quick') wizardGo(1);
 }
 document.querySelectorAll('#modeToggle button').forEach(b=>b.addEventListener('click', ()=>setPlanMode(b.dataset.mode)));
@@ -2429,30 +2474,70 @@ function estimateMacros(r){
    professional supervision, not an app's autofill. */
 const MIN_DAILY_CALORIES = 1400;
 
+/* Activity multipliers applied to BMR. Standard Harris-Benedict style factors —
+   deliberately conservative at the top end, because self-reported activity runs
+   high and an overestimate quietly stalls a deficit. */
+const ACTIVITY_FACTORS = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725 };
+
+/* Maintenance calories. Mifflin-St Jeor is the estimate most dietitians use and
+   needs age, height and sex; when any of those are missing we fall back to the
+   old bodyweight x 30 rule of thumb so the planner still works from weight alone.
+   Both are estimates of the same thing — neither is a measurement. */
+function estimateMaintenance(weightKg){
+  const age = parseFloat(document.getElementById('age').value);
+  const height = parseFloat(document.getElementById('height').value);
+  const sex = document.getElementById('calcSex') ? document.getElementById('calcSex').value : '';
+  const act = ACTIVITY_FACTORS[document.getElementById('calcActivity') ? document.getElementById('calcActivity').value : ''] || 1.375;
+  if(age > 0 && height > 0 && (sex === 'male' || sex === 'female')){
+    const bmr = (10*weightKg) + (6.25*height) - (5*age) + (sex === 'male' ? 5 : -161);
+    return { maintenance: bmr * act, method: 'mifflin', bmr: Math.round(bmr), activity: act };
+  }
+  return { maintenance: weightKg * 30, method: 'rule-of-thumb', bmr: null, activity: null };
+}
+
 function estimateDailyTargets(weightKg, goal){
   if(!weightKg || weightKg<=0) return null;
-  const maintenance = weightKg * 30;
+  const base = estimateMaintenance(weightKg);
+  const maintenance = base.maintenance;
   let calories, proteinPerKg;
   if(goal==='deficit'){ calories = maintenance*0.8; proteinPerKg = 2.0; }
   else if(goal==='surplus'){ calories = maintenance*1.15; proteinPerKg = 1.6; }
   else { calories = maintenance; proteinPerKg = 1.8; }
   let clamped = false;
   if(calories < MIN_DAILY_CALORIES){ calories = MIN_DAILY_CALORIES; clamped = true; }
-  return { calories: Math.round(calories/10)*10, protein: Math.round(weightKg*proteinPerKg), clamped };
+  return {
+    calories: Math.round(calories/10)*10,
+    protein: Math.round(weightKg*proteinPerKg),
+    clamped,
+    method: base.method,
+    bmr: base.bmr,
+    maintenance: Math.round(maintenance/10)*10
+  };
 }
 function clampNote(daily){
   return daily.clamped ? ` Suggestion capped at a minimum of ${MIN_DAILY_CALORIES} kcal/day — for anything lower, please speak to a doctor or dietitian.` : '';
 }
 
+/* One calculator serving both jobs: it fills the daily targets the week planner
+   uses AND the per-meal targets the single-meal finder uses, so whichever path
+   you are on, the numbers are already there. */
 document.getElementById('suggestBtn').addEventListener('click', ()=>{
   const w = parseFloat(document.getElementById('weight').value);
-  const daily = estimateDailyTargets(w, state.goal);
   const msg = document.getElementById('suggestMsg');
-  if(!daily){ msg.textContent = 'Enter your weight above first.'; return; }
+  const daily = estimateDailyTargets(w, state.goal);
+  if(!daily){ msg.textContent = 'Enter your weight first — that is the one figure we cannot estimate without.'; return; }
+
+  document.getElementById('wkCal').value = daily.calories;
+  document.getElementById('wkProtein').value = daily.protein;
   const prop = SLOT_PROPORTIONS[state.meal];
   document.getElementById('cal').value = Math.round(daily.calories*prop);
   document.getElementById('protein').value = Math.round(daily.protein*prop);
-  msg.textContent = `Estimated from ${w}kg, ${state.goal} (≈${daily.calories} kcal / ${daily.protein}g protein daily — a rough guide, adjust to your own results).` + clampNote(daily);
+
+  const goalWord = state.goal === 'deficit' ? 'losing fat' : state.goal === 'surplus' ? 'building' : 'maintaining';
+  const how = daily.method === 'mifflin'
+    ? `Worked out from your height, weight, age, sex and activity level (Mifflin-St Jeor): about ${daily.bmr} kcal at rest, ${daily.maintenance} kcal to maintain.`
+    : `Estimated from your weight alone. Add your height, age and sex above for a noticeably closer figure.`;
+  msg.innerHTML = `<strong>${daily.calories} kcal and ${daily.protein}g protein a day</strong> for ${goalWord}. ${how} These are estimates, not medical advice — adjust them based on how your own weight actually responds over a few weeks.` + clampNote(daily);
   render();
 });
 document.getElementById('wkSuggestBtn').addEventListener('click', ()=>{
