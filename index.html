@@ -27,6 +27,11 @@
 }
 *{box-sizing:border-box;}
 html{scroll-behavior:smooth;}
+/* Anton ships a single weight (400). Headings default to bold, which makes the
+   browser synthesise a fake bold — it renders smeared and looks blurry. Reset
+   heading weight here; rules that genuinely want bold (Work Sans, which has a
+   real 700) set it themselves and win on specificity. */
+h1,h2,h3,h4,h5,h6{font-weight:400;}
 body{margin:0;background:var(--cream);color:var(--ink);font-family:'Work Sans',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
 img{max-width:100%;}
 .inner{max-width:1220px;margin:0 auto;padding:0 28px;}
@@ -55,7 +60,7 @@ img{max-width:100%;}
 .auth-card{background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:24px 26px;position:relative;scroll-margin-top:96px;}
 .auth-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:6px;border-radius:999px;}
 .auth-close:hover{background:var(--ink);color:var(--cream);}
-.auth-card h4{margin:0 0 6px;font-family:'Anton',sans-serif;font-size:20px;text-transform:uppercase;letter-spacing:.02em;}
+.auth-card h4{margin:0 0 6px;font-family:'Anton',sans-serif;font-weight:400;font-size:20px;text-transform:uppercase;letter-spacing:.02em;}
 .auth-card .hint{margin:0 0 14px;}
 .auth-fields{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
 .auth-fields input{flex:1;min-width:210px;background:var(--card);border:1.5px solid var(--line-strong);color:var(--ink);padding:12px 14px;border-radius:4px;font-family:'Work Sans',sans-serif;font-size:14px;}
@@ -63,7 +68,7 @@ img{max-width:100%;}
 .plans-card[open]{padding-bottom:24px;}
 .plans-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;cursor:pointer;list-style:none;padding:4px 0;}
 .plans-card-head::-webkit-details-marker{display:none;}
-.plans-card-head h4{margin:0;font-family:'Anton',sans-serif;font-size:20px;text-transform:uppercase;letter-spacing:.02em;}
+.plans-card-head h4{margin:0;font-family:'Anton',sans-serif;font-weight:400;font-size:20px;text-transform:uppercase;letter-spacing:.02em;}
 .plans-card-head-right{display:flex;align-items:center;gap:10px;}
 .plans-card-head .chev{display:inline-block;font-size:14px;color:var(--muted);transition:transform .18s ease;}
 .plans-card[open] .plans-card-head .chev{transform:rotate(180deg);}
@@ -78,7 +83,7 @@ img{max-width:100%;}
 .nextweek-card{display:none;background:var(--ink);color:var(--cream);border-radius:6px;padding:24px 26px;margin-top:18px;scroll-margin-top:90px;}
 .nextweek-card.show{display:block;}
 .nextweek-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
-.nextweek-card h4{margin:0 0 5px;font-family:'Anton',sans-serif;font-size:22px;text-transform:uppercase;letter-spacing:.02em;color:var(--cream);}
+.nextweek-card h4{margin:0 0 5px;font-family:'Anton',sans-serif;font-weight:400;font-size:22px;text-transform:uppercase;letter-spacing:.02em;color:var(--cream);}
 .nextweek-card p{margin:0;font-size:13.5px;color:#B9B2A0;line-height:1.6;max-width:520px;}
 .nextweek-card .cta-orange{padding:14px 28px;font-size:12px;white-space:nowrap;}
 .cooked-meter{display:flex;gap:5px;margin-top:12px;}
@@ -311,7 +316,7 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 
 /* coach summary — the "here's your week" moment */
 .coach-panel{background:var(--ink);color:var(--cream);border-radius:8px;padding:26px 30px;margin-top:24px;}
-.coach-panel h3{margin:0 0 12px;font-family:'Anton',sans-serif;font-size:24px;text-transform:uppercase;letter-spacing:.02em;color:var(--cream);}
+.coach-panel h3{margin:0 0 12px;font-family:'Anton',sans-serif;font-weight:400;font-size:24px;text-transform:uppercase;letter-spacing:.02em;color:var(--cream);}
 .coach-panel p{margin:0;font-size:15.5px;line-height:1.75;color:#DDD7C6;max-width:660px;}
 .coach-panel strong{color:var(--cream);font-weight:600;}
 .coach-panel .good{color:var(--gold);font-weight:600;}
@@ -326,7 +331,7 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .week-section{background:var(--card-alt);border:1.5px solid var(--line-strong);border-radius:8px;padding:24px 26px;margin-top:22px;}
 .week-section > .results-head:first-child{margin-top:0;}
 .week-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:11px;margin-bottom:4px;}
-.week-section-head h3{margin:0;font-family:'Anton',sans-serif;font-size:24px;text-transform:uppercase;letter-spacing:.02em;color:var(--ink);}
+.week-section-head h3{margin:0;font-family:'Anton',sans-serif;font-weight:400;font-size:24px;text-transform:uppercase;letter-spacing:.02em;color:var(--ink);}
 .week-section-head .sub{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
 
 /* week balance check */
@@ -414,7 +419,10 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
 .slot-cell.search-hit{background:rgba(232,85,29,.12);outline:1.5px solid var(--orange);}
 .swap-btn{margin-top:6px;background:none;border:1px solid var(--ink);color:var(--ink);font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 11px;border-radius:999px;cursor:pointer;}
 .swap-btn:hover{background:var(--ink);color:var(--cream);}
-.meal-btns{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+/* sits on its own line under the meal info, so both buttons stay side by side
+   instead of being squeezed against the recipe name and wrapping */
+.meal-btns{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;margin-top:8px;}
+.meal-btns .swap-btn, .meal-btns .allweek-btn{margin-top:0;}
 .allweek-btn{margin-top:6px;background:none;border:1px dashed var(--line-strong);color:var(--muted);font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 11px;border-radius:999px;cursor:pointer;white-space:nowrap;}
 .allweek-btn:hover{background:var(--gold);border-color:var(--gold);border-style:solid;color:var(--ink);}
 .week-summary{display:flex;gap:34px;flex-wrap:wrap;margin-top:22px;font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
@@ -2910,6 +2918,11 @@ function renderWeekUI(){
           </select>`
         : '';
       cells += `<td class="slot-cell" data-di="${di}" data-slot="${slot}"><span class="rname">${r.name}</span><span class="rmacro">${r.cal}kcal · ${r.protein}g · £${r.price.toFixed(2)}</span>${pickHTML ? pickHTML + allWeekBtn : mealBtns}</td>`;
+      // buttons live inside the info column (full card width) rather than
+      // beside it, so "swap" and "all week" sit on one line together
+      const cardBtns = weekCustomize
+        ? `<span class="meal-btns">${allWeekBtn}</span>`
+        : (cands.length>1 ? `<span class="meal-btns">${swapBtn}${allWeekBtn}</span>` : '');
       meals += `
       <div class="day-meal" data-di="${di}" data-slot="${slot}">
         <img class="day-meal-img" src="${foodImg(r)}" alt="" loading="lazy">
@@ -2918,9 +2931,8 @@ function renderWeekUI(){
           <span class="day-meal-name rname">${r.name}</span>
           <span class="day-meal-stats">${r.cal} kcal · ${r.protein}g protein · £${r.price.toFixed(2)}</span>
           ${pickHTML}
-          ${weekCustomize ? `<span class="meal-btns">${allWeekBtn}</span>` : ''}
+          ${cardBtns}
         </div>
-        ${weekCustomize ? '' : mealBtns}
       </div>`;
     });
     planMatrix.push(dayPlan);
