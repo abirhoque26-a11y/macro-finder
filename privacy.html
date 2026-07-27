@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Privacy Policy — Macro Mastery</title>
+<meta name="description" content="How Macro Mastery handles your data: what we store, where, and your rights under UK GDPR.">
+<link rel="canonical" href="https://www.macromastery.uk/privacy.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Macro Mastery">
+<meta property="og:title" content="Privacy Policy — Macro Mastery">
+<meta property="og:description" content="How Macro Mastery handles your data: what we store, where, and your rights under UK GDPR.">
+<meta property="og:url" content="https://www.macromastery.uk/privacy.html">
+<meta name="twitter:card" content="summary">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=Work+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap');
 :root{
@@ -104,10 +112,11 @@ a{color:var(--orange-deep);}
       <li>Identify you when you sign in</li>
       <li>Save and restore your meal plans, favourites and checklist progress across sessions</li>
     </ul>
-    <p>We do not sell your data. We do not use your data for advertising. We do not share your data with any third parties except Supabase, which processes it on our behalf as described above.</p>
+    <p>We do not sell your data. We do not use your data for advertising. We do not share your data with any third parties except Supabase and Vercel, which process it on our behalf as described here.</p>
 
-    <h2>Cookies and tracking</h2>
-    <p>We use a session cookie set by Supabase to keep you signed in. This is a strictly necessary cookie — the app cannot function without it. We do not currently use any analytics cookies, advertising cookies, or third-party tracking.</p>
+    <h2>Cookies and analytics</h2>
+    <p>We use a session cookie set by Supabase to keep you signed in. This is a strictly necessary cookie — the app cannot function without it. We do not use advertising cookies, and we do not track you across other websites.</p>
+    <p>We use <strong>Vercel Web Analytics</strong> to count visits and see which pages are used. It is <strong>cookieless</strong>: it stores nothing on your device, does not create a profile of you, does not follow you to other sites, and cannot identify you individually. It records aggregate figures only — page views, roughly where in the world visitors are, and what kind of device and browser they use. We use this to work out which parts of the site are confusing or unused. Because no cookies are set and no personal profile is built, no consent banner is required.</p>
 
     <h2>Your rights</h2>
     <p>Under UK GDPR you have the right to:</p>
@@ -138,6 +147,7 @@ a{color:var(--orange-deep);}
         <p class="foot-tag">Eat for your goals. Without the spreadsheet.</p>
       </div>
       <div class="foot-links">
+        <a href="/recipes/">All recipes</a>
         <a href="/about.html">About</a>
         <a href="/contact.html">Contact</a>
         <a href="/privacy.html">Privacy Policy</a>
@@ -151,5 +161,8 @@ a{color:var(--orange-deep);}
   </div>
 </footer>
 
+<!-- Vercel Web Analytics: cookieless, aggregate page/visitor counts.
+     Served by Vercel in production; 404s harmlessly on localhost. -->
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
