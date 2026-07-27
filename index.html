@@ -589,6 +589,17 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <div class="plans-card-body" id="savedPlansPanel"><p class="hint plans-empty">Loading…</p></div>
   </details>
 
+  <details class="plans-card" id="checklistSection" style="display:none;" open>
+    <summary class="plans-card-head">
+      <h4>This week's cooking checklist</h4>
+      <span class="plans-card-head-right">
+        <span class="hint" id="checklistHint"></span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </span>
+    </summary>
+    <div class="plans-card-body" id="checklistPanel"></div>
+  </details>
+
   <details class="plans-card" id="historySection" style="display:none;">
     <summary class="plans-card-head">
       <h4>Your cooking history</h4>
@@ -1173,6 +1184,8 @@ supabaseClient.auth.onAuthStateChange(async (event, session)=>{
   renderSavedPlansList();
   if(currentUser){ restoreProfileOnce(); renderPinChips(); }
   restoreLastWeek();
+  // after restoreLastWeek — it's what tells the checklist there's a week to tick
+  renderChecklistCard();
   render();
   if(RECIPES.length) refreshPantryUI();
 });
@@ -1589,6 +1602,12 @@ function renderNextWeekCard(){
   const card = document.getElementById('nextWeekCard');
   if(!card) return;
   if(!lastWeek || !lastWeek.meals){ card.classList.remove('show'); return; }
+  /* snapshotLastWeek() rewrites this on every plan change, including ticks, so the
+     snapshot is usually the week you're still living in. This card exists to move
+     you on from a finished week — showing it mid-week meant calling today "last
+     week". Only show it once the snapshot is genuinely behind us. (Snapshots from
+     before weekStart was stored have no date to compare, so they still show.) */
+  if(lastWeek.weekStart && lastWeek.weekStart >= currentMonday()){ card.classList.remove('show'); return; }
   card.classList.add('show');
   const { daysCooked, skipped } = lastWeekOutcome();
   const when = lastWeek.savedAt ? new Date(lastWeek.savedAt).toLocaleDateString() : null;
@@ -1821,6 +1840,7 @@ async function toggleProgress(day, checked){
   }
   // the checklist is also the history logger — no separate "log this day" step
   await logCookedDay(day, checked);
+  renderChecklistCard();
   if(weekState.activeSlots.length){ renderWeekUI(); snapshotLastWeek(); }
 }
 /* Clears this week's checklist only. cooked_days is a separate table and is
@@ -1828,6 +1848,7 @@ async function toggleProgress(day, checked){
 async function resetProgress(){
   progress = {};
   if(currentUser) await supabaseClient.from('progress').delete().eq('user_id', currentUser.id);
+  renderChecklistCard();
   if(weekState.activeSlots.length) renderWeekUI();
 }
 
@@ -1976,7 +1997,7 @@ async function logCookedDay(day, checked){
     if(currentUser){
       const { error } = await supabaseClient.from('cooked_days')
         .delete().eq('user_id', currentUser.id).eq('cooked_on', cooked_on);
-      if(error) console.error('logCookedDay delete', error);
+      if(error){ console.error('logCookedDay delete', error); showToast("Couldn't remove that day from your history — check your connection."); }
     } else saveLocalHistory();
     renderHistoryCard();
     return;
@@ -1990,7 +2011,15 @@ async function logCookedDay(day, checked){
       { user_id: currentUser.id, ...rec, updated_at: new Date().toISOString() },
       { onConflict: 'user_id,cooked_on' }
     );
-    if(error) console.error('logCookedDay upsert', error);
+    /* A failed write here loses a day that can't be reconstructed, so it has to
+       be visible — this failing silently is exactly how the missing cooked_days
+       table went unnoticed. Keep the local copy as a safety net so the record
+       survives and merges up on the next successful sign-in. */
+    if(error){
+      console.error('logCookedDay upsert', error);
+      saveLocalHistory();
+      showToast("Couldn't save that day to your account — kept on this device for now.");
+    }
   } else saveLocalHistory();
   renderHistoryCard();
 }
@@ -3101,7 +3130,29 @@ function printShoppingList(){
   win.print();
 }
 
-function renderProgressHTML(){
+/* The checklist is the history logger, so it lives in its own card at the top of
+   the page rather than inside the built week — ticking off Tuesday's dinner must
+   not require rebuilding your whole plan first. resolveWeekStart() falls back to
+   the current Monday and cookedRecordFor() records source:'manual', so it works
+   with no plan on screen. Hidden only for a genuine first-time visitor, who has
+   nothing to tick and would just see seven empty boxes. */
+function renderChecklistCard(){
+  const sec = document.getElementById('checklistSection');
+  const panel = document.getElementById('checklistPanel');
+  const hint = document.getElementById('checklistHint');
+  if(!sec || !panel) return;
+
+  const hasPlan = !!(weekState.activeSlots && weekState.activeSlots.length);
+  const everUsed = hasPlan || !!lastWeek || DAYS.some(d=>progress[d]) || cookedHistory.length > 0;
+  if(!everUsed){ sec.style.display = 'none'; return; }
+  sec.style.display = '';
+
+  const doneCount = DAYS.filter(d=>progress[d]).length;
+  hint.textContent = `${doneCount}/7 days`;
+  panel.innerHTML = renderProgressHTML(hasPlan);
+}
+
+function renderProgressHTML(hasPlan){
   const doneCount = DAYS.filter(d=>progress[d]).length;
   const start = resolveWeekStart();
   const days = DAYS.map((d, i)=>{
@@ -3113,16 +3164,14 @@ function renderProgressHTML(){
     </label>`;
   }).join('');
   const streak = historyStats().current;
+  // with no plan open we still log the date, so say what does and doesn't get kept
+  const lead = hasPlan
+    ? `Tick off each day you cook from the plan — week commencing ${shortDate(start)}.`
+    : `Tick off each day you cook — week commencing ${shortDate(start)}. With no plan on screen we'll record the day itself; build a week first if you want the meals saved alongside it.`;
   return `
-  <div class="progress-block">
-    <div class="results-head" style="margin:0 0 4px;border:none;padding:0;">
-      <h2 style="font-size:20px;">This week's cooking checklist</h2>
-      <span class="results-count">${doneCount}/7 days</span>
-    </div>
-    <p class="hint">Tick off each day you cook from the plan — week commencing ${shortDate(start)}. Ticked days are kept in your cooking history, so resetting the checklist for a new week doesn't lose them. <a href="#" onclick="resetProgress();return false;" style="color:var(--herb);">Reset for a new week</a></p>
+    <p class="hint">${lead} Ticked days are kept in your cooking history, so resetting the checklist for a new week doesn't lose them. <a href="#" onclick="resetProgress();return false;" style="color:var(--herb);">Reset for a new week</a></p>
     <div class="progress-days">${days}</div>
-    ${streak ? `<p class="hint" style="margin-top:12px;color:var(--herb);font-weight:600;">🔥 ${streak} day${streak!==1?'s':''} cooked in a row.</p>` : ''}
-  </div>`;
+    ${streak ? `<p class="hint" style="margin-top:12px;color:var(--herb);font-weight:600;">🔥 ${streak} day${streak!==1?'s':''} cooked in a row.</p>` : ''}`;
 }
 
 function getRecipesInCurrentPlan(){
@@ -3354,7 +3403,8 @@ function renderWeekUI(){
 
   const header = `<tr><th>Day</th>${ws.activeSlots.map(s=>`<th>${s}</th>`).join('')}<th>Daily total</th></tr>`;
   const shopHTML = buildShoppingListHTML(planMatrix, ws.activeSlots, weeklyCost);
-  const progressHTML = renderProgressHTML();
+  // the checklist now has its own card at the top of the page, not buried down here
+  renderChecklistCard();
 
   // Balance check: flag days far off the calorie target and weeks under on protein
   let balanceHTML = '';
@@ -3423,8 +3473,6 @@ function renderWeekUI(){
     </section>
 
     <section class="week-section">${shopHTML}</section>
-
-    ${progressHTML}
   `;
   autoSwapMsg = '';
 
@@ -3669,6 +3717,7 @@ document.getElementById('results').innerHTML = '<div class="empty">Loading recip
   renderSavedPlansList();
   restoreProfileOnce();
   restoreLastWeek();
+  renderChecklistCard();
   document.getElementById('recipeNameList').innerHTML = RECIPES.map(r=>`<option value="${r.name.replace(/"/g,'&quot;')}">`).join('');
   renderPinChips();
   render();
