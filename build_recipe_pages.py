@@ -219,7 +219,8 @@ def shell(title, desc, canonical, body, og_image=None, jsonld=None):
     <a class="nav-logo" href="/">MACRO <b>MASTERY</b><i>/UK</i></a>
     <nav class="nav-links">
       <a href="/#planner">Planner</a>
-      <a href="/recipes/" class="here">Recipes</a>
+      <a href="/#matches">Matches</a>
+      <a href="/recipes/" class="here">All recipes</a>
       <a href="/#how">How it works</a>
       <a href="/about.html">About</a>
     </nav>

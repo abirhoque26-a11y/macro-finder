@@ -510,8 +510,13 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
   .stat:nth-child(n+3){border-top:1.5px solid var(--ink);}
 }
 @media(max-width:640px){
+  /* Six nav items wrap to three rows on a phone. Sticking that to the top costs
+     a quarter of the screen on every scroll, so on narrow viewports the header
+     scrolls away with the page instead. */
+  .site-head{position:static;}
   .head-inner{padding:12px 18px;}
-  .nav-links{gap:16px;}
+  .nav-links{gap:13px;row-gap:8px;}
+  .nav-links a{font-size:11px;letter-spacing:.1em;}
   .inner, .auth-shelf{padding-left:18px;padding-right:18px;}
   .form-panel, #weekPanel{padding:24px 18px;}
   .week-section{padding:18px 14px;}
@@ -536,7 +541,11 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <a class="nav-logo" href="/">MACRO <b>MASTERY</b><i>/UK</i></a>
     <nav class="nav-links">
       <a href="#planner">Planner</a>
-      <a href="#matches">Recipes</a>
+      <!-- two different things, so two different names: "Matches" is the filtered
+           results for your own targets, "All recipes" is the full browsable
+           catalogue at /recipes/. Both used to be called "Recipes". -->
+      <a href="#matches">Matches</a>
+      <a href="/recipes/">All recipes</a>
       <a href="#kitchen">My kitchen</a>
       <a href="#how">How it works</a>
       <a href="/about.html">About</a>
