@@ -649,7 +649,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
 <section class="stats-sec">
   <div class="inner">
     <div class="stats-strip">
-      <div class="stat s-gold"><span class="stat-n">82+</span><span class="stat-l">Recipes &amp; growing</span></div>
+      <div class="stat s-gold"><span class="stat-n" id="recipeCountStat">82+</span><span class="stat-l">Recipes &amp; growing</span></div>
       <div class="stat s-ink"><span class="stat-n">5</span><span class="stat-l">UK supermarkets linked</span></div>
       <div class="stat s-orange"><span class="stat-n">60s</span><span class="stat-l">Built around your kcal &amp; protein targets</span></div>
       <div class="stat s-paper"><span class="stat-n">£0</span><span class="stat-l">Free to use</span></div>
@@ -3810,6 +3810,9 @@ function refreshPantryUI(){
 document.getElementById('results').innerHTML = '<div class="empty">Loading recipes…</div>';
 (async function init(){
   RECIPES = await loadRecipesFromDB();
+  // read the real count rather than a hard-coded number that goes stale every
+  // time a recipe is added to the database
+  if(RECIPES.length) document.getElementById('recipeCountStat').textContent = RECIPES.length + '+';
   startHeroRotation();
   const { data: { session } } = await supabaseClient.auth.getSession();
   currentUser = session ? session.user : null;
