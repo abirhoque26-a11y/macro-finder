@@ -1358,9 +1358,11 @@ function openHeroRecipe(){
   document.getElementById('recipeModal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
-/* any recipe card photo opens the same popup */
+/* any recipe card photo opens the same popup — prefer the scaled version the
+   user actually clicked, so the popup can't contradict the card it came from */
 function openRecipeByName(name){
-  const r = RECIPES.find(x=>x.name===name);
+  const r = (typeof currentMatches !== 'undefined' ? currentMatches.find(x=>x.name===name) : null)
+         || RECIPES.find(x=>x.name===name);
   if(!r) return;
   modalRecipe = r;
   renderModalCard();
@@ -2211,6 +2213,42 @@ function cardHTML(r, cal, protein, overBudgetNote){
   </div>`;
 }
 
+/* ---------- Portion scaling of ingredient amounts ----------
+   When a recipe's portion is scaled to hit your target, the quantities have to
+   move with it — otherwise the card claims 900 kcal while still listing the
+   ingredients for 600. Quantities in the data look like "200g", "2 tbsp",
+   "150g, uncooked", "1, sliced", or "handful"/"pinch"/"to taste" with no
+   number at all, so we scale a leading number and leave everything else
+   untouched. */
+function fmtAmount(n){ return Number.isInteger(n) ? String(n) : String(parseFloat(n.toFixed(2))); }
+
+function roundAmount(n, rest){
+  // weights and volumes round to friendly increments; counts and spoons to halves
+  if(/^\s*(g|ml|kg|l)\b/i.test(rest)){
+    if(n >= 100) return Math.round(n/10)*10;
+    if(n >= 20)  return Math.round(n/5)*5;
+    return Math.max(1, Math.round(n));
+  }
+  return Math.max(0.5, Math.round(n*2)/2);
+}
+
+function scaleQty(qty, factor){
+  if(!factor || factor === 1) return qty;
+  const m = String(qty).match(/^(\s*)(\d+(?:\.\d+)?)([\s\S]*)$/);
+  if(!m) return qty;                       // "handful", "pinch", "to taste", "few thin rings"
+  const [, lead, num, rest] = m;
+  return `${lead}${fmtAmount(roundAmount(parseFloat(num) * factor, rest))}${rest}`;
+}
+
+/* Method steps occasionally name an amount ("season a 150g chicken breast").
+   Only g/ml are scaled — the steps are full of times ("25 minutes"),
+   temperatures ("200°C") and sizes ("2cm") that must never be touched. */
+function scaleStepText(step, factor){
+  if(!factor || factor === 1) return step;
+  return String(step).replace(/(\d+(?:\.\d+)?)\s*(g|ml)\b/gi, (full, num, unit)=>
+    `${fmtAmount(roundAmount(parseFloat(num) * factor, unit))}${unit}`);
+}
+
 /* ---------- Results pagination ----------
    All matching recipes are kept (no arbitrary cap) and split across pages so a
    broad search (e.g. just "lunch") still surfaces every match, not just a
@@ -2255,8 +2293,11 @@ function render(){
       cal: roundF(r.cal),
       protein: roundF(r.protein),
       price: parseFloat((r.price * factor).toFixed(2)),
+      // ingredient amounts and any amounts named in the method move with the portion
+      ing: r.ing.map(([name, qty])=>[name, scaleQty(qty, factor)]),
+      steps: r.steps.map(s=>scaleStepText(s, factor)),
       scaleFactor: factor,
-      scaleNote: factor !== 1 ? `Portions ${factor > 1 ? 'scaled up' : 'scaled down'} ${Math.round(factor*100)}% to hit your ${targetLabel} target` : null
+      scaleNote: factor !== 1 ? `Portions ${factor > 1 ? 'scaled up' : 'scaled down'} ${Math.round(factor*100)}% to hit your ${targetLabel} target — ingredient amounts adjusted to match` : null
     };
   });
 
