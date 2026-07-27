@@ -948,6 +948,16 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
           <span class="hint" id="wkSuggestMsg" style="margin:0;"></span>
         </div>
         <div class="field form-full">
+          <label>Dietary requirements <span class="badge optional">Optional</span></label>
+          <div class="chips" id="chip-diet-week">
+            <div class="chip" data-val="vegetarian">Vegetarian</div>
+            <div class="chip" data-val="vegan">Vegan</div>
+            <div class="chip" data-val="gluten-free">Gluten-free</div>
+            <div class="chip" data-val="dairy-free">Dairy-free</div>
+          </div>
+          <p class="hint">Applied to every meal in the week. These are the same settings as the ones in "Find one meal" — change them here or there and both stay in step.</p>
+        </div>
+        <div class="field form-full">
           <label>Meals to include each day <span class="badge advised">Advised</span></label>
           <div class="chips" id="chip-slots">
             <div class="chip active" data-val="breakfast">Breakfast</div>
@@ -956,7 +966,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
             <div class="chip active" data-val="snack">Snack</div>
             <div class="chip" data-val="shake">Shake</div>
           </div>
-          <p class="hint">Diet, skill, protein powder, and ingredient preferences above carry over into the week. Shake is off by default — turn it on to add it as a 5th slot, or use it in place of Breakfast/Snack instead.</p>
+          <p class="hint">Skill level, protein powder and preferred protein/carb sources come from "Find one meal" if you set them there. Shake is off by default — turn it on to add it as a 5th slot, or use it in place of Breakfast/Snack instead.</p>
         </div>
         <div class="field form-full">
           <label>Recipe variety per meal <span class="badge optional">Optional</span></label>
@@ -1562,7 +1572,7 @@ function applyProfile(p){
   try{
     if(p.goal){ state.goal = p.goal; document.querySelectorAll('#seg-goal button').forEach(b=>b.classList.toggle('active', b.dataset.val===p.goal)); }
     state.diet = (p.diet||[]).slice();
-    document.querySelectorAll('#chip-diet .chip').forEach(c=>c.classList.toggle('active', state.diet.includes(c.dataset.val)));
+    syncDietChips();
     if(p.skill){ state.skill = p.skill; document.querySelectorAll('#seg-skill button').forEach(b=>b.classList.toggle('active', b.dataset.val===p.skill)); }
     if(p.pp){ state.pp = p.pp; document.querySelectorAll('#seg-pp button').forEach(b=>b.classList.toggle('active', b.dataset.val===p.pp)); }
     if(p.proteinPref){ state.proteinPref = p.proteinPref; document.getElementById('sel-protein').value = p.proteinPref; }
@@ -2233,7 +2243,7 @@ function applySavedPlanConfig(cfg){
   state.goal = cfg.goal;
   document.querySelectorAll('#seg-goal button').forEach(b=>b.classList.toggle('active', b.dataset.val===cfg.goal));
   state.diet = (cfg.diet||[]).slice();
-  document.querySelectorAll('#chip-diet .chip').forEach(c=>c.classList.toggle('active', state.diet.includes(c.dataset.val)));
+  syncDietChips();
   state.skill = cfg.skill;
   document.querySelectorAll('#seg-skill button').forEach(b=>b.classList.toggle('active', b.dataset.val===cfg.skill));
   state.pp = cfg.pp;
@@ -2359,11 +2369,19 @@ document.querySelectorAll('#seg-scale button').forEach(b=>b.addEventListener('cl
   document.querySelectorAll('#seg-scale button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active'); state.scalePriority=b.dataset.val; render();
 }));
-document.querySelectorAll('#chip-diet .chip').forEach(c=>c.addEventListener('click',()=>{
-  c.classList.toggle('active');
+/* Dietary requirements appear twice — once in the single-meal wizard and once in
+   the week planner — because each path has to stand on its own. A vegan planning
+   a week should never have to detour through the meal finder to say so. Both sets
+   drive the same state.diet, and this keeps them showing the same thing. */
+function syncDietChips(){
+  document.querySelectorAll('#chip-diet .chip, #chip-diet-week .chip').forEach(c=>
+    c.classList.toggle('active', state.diet.includes(c.dataset.val)));
+}
+document.querySelectorAll('#chip-diet .chip, #chip-diet-week .chip').forEach(c=>c.addEventListener('click',()=>{
   const v=c.dataset.val;
   if(state.diet.includes(v)) state.diet=state.diet.filter(x=>x!==v);
   else state.diet.push(v);
+  syncDietChips();
   render();
 }));
 document.getElementById('favOnlyChip').addEventListener('click', function(){
