@@ -93,6 +93,24 @@ img{max-width:100%;}
 .nextweek-changes strong{font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:6px;}
 .nextweek-changes ul{margin:0;padding-left:18px;line-height:1.75;}
 
+/* ---------- Cooking history ---------- */
+/* the meter was designed for the dark "next week" card; on the cream history
+   card the unfilled dots need a light background to be visible at all */
+.cooked-meter.light{margin-top:0;}
+.cooked-meter.light .cooked-dot{background:#E4DCC4;color:#8B8471;}
+/* must come after the rule above and out-specify it: .cooked-dot.done ties on
+   specificity with .cooked-meter.light .cooked-dot, so without this the later
+   rule wins and every day renders as "not cooked" */
+.cooked-meter.light .cooked-dot.done{background:var(--herb);color:#F4EFE1;}
+.hist-stats{display:flex;gap:26px;flex-wrap:wrap;margin:2px 0 20px;}
+.hist-stat{font-family:'Oswald',sans-serif;font-weight:600;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+.hist-stat b{display:block;font-family:'Anton',sans-serif;font-weight:400;font-size:27px;letter-spacing:.01em;color:var(--ink);margin-bottom:2px;}
+.hist-stat b.herb{color:var(--herb);}
+.hist-stat b.orange{color:var(--orange-deep);}
+.hist-grid{display:flex;flex-direction:column;gap:5px;margin-top:4px;}
+.hist-row{display:flex;align-items:center;gap:10px;}
+.hist-row .wk{font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);width:62px;flex-shrink:0;text-align:right;}
+
 /* ---------- Hero ---------- */
 .hero-sec{padding:64px 0 60px;}
 .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;}
@@ -569,6 +587,17 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       </span>
     </summary>
     <div class="plans-card-body" id="savedPlansPanel"><p class="hint plans-empty">Loading…</p></div>
+  </details>
+
+  <details class="plans-card" id="historySection" style="display:none;">
+    <summary class="plans-card-head">
+      <h4>Your cooking history</h4>
+      <span class="plans-card-head-right">
+        <span class="hint" id="historyHint"></span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </span>
+    </summary>
+    <div class="plans-card-body" id="historyPanel"></div>
   </details>
 </div>
 
@@ -1134,6 +1163,13 @@ supabaseClient.auth.onAuthStateChange(async (event, session)=>{
   favourites = currentUser ? await loadFavourites() : [];
   progress = currentUser ? await loadProgress() : {};
   savedPlans = currentUser ? await loadSavedPlans() : {};
+  cookedHistory = await loadHistory();
+  if(currentUser){
+    // anything logged as a guest on this device comes with them
+    const moved = await mergeLocalHistory();
+    if(moved) showToast(`📖 ${moved} logged day${moved!==1?'s':''} added to your account`);
+  }
+  renderHistoryCard();
   renderSavedPlansList();
   if(currentUser){ restoreProfileOnce(); renderPinChips(); }
   restoreLastWeek();
@@ -1506,7 +1542,8 @@ function snapshotLastWeek(){
       if(list.length) meals[di][s] = list[weekState.planIndex[di][s]].name;
     });
   });
-  lastWeek = { savedAt: new Date().toISOString(), slots: weekState.activeSlots.slice(), meals, cooked: {...progress} };
+  // weekStart rides along so the history anchor survives a page reload
+  lastWeek = { savedAt: new Date().toISOString(), weekStart: planWeekStart, slots: weekState.activeSlots.slice(), meals, cooked: {...progress} };
   clearTimeout(lastWeekSaveTimer);
   lastWeekSaveTimer = setTimeout(async ()=>{
     localStorage.setItem('mm_lastweek', JSON.stringify(lastWeek));
@@ -1526,6 +1563,8 @@ function restoreLastWeek(){
   try{ local = JSON.parse(localStorage.getItem('mm_lastweek') || 'null'); }catch(e){}
   const w = remote || local;
   if(w && w.meals && w.slots) lastWeek = w;
+  // resolveWeekStart() ignores this again if it's gone stale
+  if(lastWeek && lastWeek.weekStart) planWeekStart = lastWeek.weekStart;
   renderNextWeekCard();
 }
 
@@ -1598,6 +1637,12 @@ function planNextWeek(){
     showToast('Set your daily targets first, then try again.');
     return;
   }
+  /* buildWeek anchored this to the current week. Pressed on a Saturday or
+     Sunday, "plan next week" plainly means the week that's about to start, so
+     ticks land on the right dates. Pressed mid-week it means you're replanning
+     the week you're already in, and the anchor stays put. */
+  const wd = new Date().getDay();
+  if(wd === 0 || wd === 6) planWeekStart = isoDate(addDays(parseISO(currentMonday()), 7));
 
   const rotated = [], kept = [];
   DAYS.forEach((d, di)=>{
@@ -1686,6 +1731,12 @@ let lastWeek = null;      // snapshot of the previous week's meals + which days 
 let nextWeekMsg = '';     // "what changed and why" summary after a rollover
 let favourites = [];
 let progress = {};
+/* The durable ledger: one record per calendar day you cooked. `progress` above is
+   this week's scratchpad and gets wiped every rollover; this never does.
+   Deliberately not called `history` — that would shadow window.history. */
+let cookedHistory = [];
+let historyError = null;
+let planWeekStart = null;   // ISO Monday the current plan covers; anchors day ticks to real dates
 let savedPlans = {};
 let savedPlansError = null;
 let weekState = { candidatesBySlot:{}, planIndex:{}, activeSlots:[], weeklyBudget:0 };
@@ -1768,12 +1819,266 @@ async function toggleProgress(day, checked){
   if(currentUser){
     await supabaseClient.from('progress').upsert({ user_id: currentUser.id, day, done: checked, updated_at: new Date().toISOString() });
   }
+  // the checklist is also the history logger — no separate "log this day" step
+  await logCookedDay(day, checked);
   if(weekState.activeSlots.length){ renderWeekUI(); snapshotLastWeek(); }
 }
+/* Clears this week's checklist only. cooked_days is a separate table and is
+   never touched here — that's the whole point of it. */
 async function resetProgress(){
   progress = {};
   if(currentUser) await supabaseClient.from('progress').delete().eq('user_id', currentUser.id);
   if(weekState.activeSlots.length) renderWeekUI();
+}
+
+/* ---------- History layer: cooked_days ----------
+   `progress` is a rolling 7-checkbox scratchpad keyed by weekday NAME, wiped on
+   every rollover. This is the permanent ledger, keyed by real calendar date, and
+   it's what streaks, monthly totals and (later) analytics read from. It cannot be
+   backfilled, so ticking a day writes a row immediately.
+
+   Signed-in: rows in Supabase under RLS. Signed-out: the same records in
+   localStorage, merged up on sign-in — same fallback pattern as __profile and
+   __lastweek. */
+const HISTORY_KEY = 'mm_history';
+const HISTORY_LOCAL_CAP = 180;   // days kept for guests before the oldest drop off
+
+/* Dates are formatted from LOCAL components on purpose. toISOString() would
+   shift the date backwards for anyone ticking a day before 01:00 BST, silently
+   logging "yesterday" all summer. */
+function isoDate(d){
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+/* Anchored at noon so adding days can never trip over a DST boundary. */
+function parseISO(s){ const [y,m,d] = String(s).split('-').map(Number); return new Date(y, m-1, d, 12, 0, 0); }
+function addDays(d, n){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()+n, 12, 0, 0); }
+function daysBetween(isoA, isoB){ return Math.round((parseISO(isoB) - parseISO(isoA)) / 86400000); }
+function mondayOf(d){ const wd = d.getDay(); return addDays(d, wd === 0 ? -6 : 1 - wd); }
+function currentMonday(){ return isoDate(mondayOf(new Date())); }
+function shortDate(iso){ return parseISO(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' }); }
+function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+/* Which Monday does "Wednesday" mean? The week the open plan was built for.
+   A plan left open for weeks would otherwise write dates for a week nobody is
+   living in, so anything outside a sane window falls back to this week. */
+function resolveWeekStart(){
+  if(planWeekStart){
+    const drift = daysBetween(planWeekStart, isoDate(new Date()));
+    if(drift >= -7 && drift <= 14) return planWeekStart;
+  }
+  return currentMonday();
+}
+
+/* What actually gets stored for a day. Macros, cost and recipe names are copied
+   in at log time rather than joined later: re-pricing a recipe or removing one
+   must not silently rewrite what you ate in March. */
+function cookedRecordFor(di, cooked_on){
+  const ws = weekState;
+  const meals = {};
+  let kcal = 0, protein = 0, cost = 0;
+  (ws.activeSlots || []).forEach(slot=>{
+    const cands = ws.candidatesBySlot[slot] ? ws.candidatesBySlot[slot].list : [];
+    if(!cands.length || !ws.planIndex[di]) return;
+    const r = cands[ws.planIndex[di][slot]];
+    if(!r) return;
+    meals[slot] = r.name;
+    kcal += r.cal; protein += r.protein; cost += r.price;
+  });
+  const slots = Object.keys(meals);
+  return {
+    cooked_on,
+    meals,
+    slots,
+    kcal: Math.round(kcal),
+    protein: Math.round(protein),
+    cost: Math.round(cost * 100) / 100,
+    // ticked with no plan on screen — we know the day, not the meals
+    source: slots.length ? 'plan' : 'manual'
+  };
+}
+
+function normaliseHistoryRow(row){
+  return {
+    cooked_on: row.cooked_on,
+    meals: row.meals || {},
+    slots: row.slots || [],
+    kcal: row.kcal || 0,
+    protein: row.protein || 0,
+    cost: parseFloat(row.cost) || 0,
+    source: row.source || 'plan'
+  };
+}
+function sortHistory(){ cookedHistory.sort((a,b)=> b.cooked_on.localeCompare(a.cooked_on)); }
+
+function loadLocalHistory(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    return Array.isArray(raw) ? raw.filter(r=>r && r.cooked_on).map(normaliseHistoryRow) : [];
+  }catch(e){ return []; }
+}
+function saveLocalHistory(){
+  sortHistory();
+  if(cookedHistory.length > HISTORY_LOCAL_CAP) cookedHistory = cookedHistory.slice(0, HISTORY_LOCAL_CAP);
+  try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(cookedHistory)); }catch(e){}
+}
+
+async function loadHistory(){
+  // clear any error from a previous session, or signing out would leave the
+  // card stuck showing it
+  historyError = null;
+  if(!currentUser) return loadLocalHistory();
+  const since = isoDate(addDays(new Date(), -400));
+  const { data, error } = await supabaseClient
+    .from('cooked_days')
+    .select('cooked_on, meals, slots, kcal, protein, cost, source')
+    .eq('user_id', currentUser.id)
+    .gte('cooked_on', since)
+    .order('cooked_on', { ascending:false });
+  if(error){ console.error(error); historyError = error.message; return []; }
+  historyError = null;
+  return data.map(normaliseHistoryRow);
+}
+
+/* A guest who logs three weeks and then signs up must not lose them — that's
+   exactly the data that can't be recreated. Server rows always win; we only
+   insert dates the account doesn't already have. */
+async function mergeLocalHistory(){
+  if(!currentUser) return 0;
+  const local = loadLocalHistory();
+  if(!local.length) return 0;
+  const have = new Set(cookedHistory.map(h=>h.cooked_on));
+  const fresh = local.filter(h=>!have.has(h.cooked_on));
+  if(fresh.length){
+    const { error } = await supabaseClient.from('cooked_days').insert(
+      fresh.map(h=>({
+        user_id: currentUser.id, cooked_on: h.cooked_on, meals: h.meals, slots: h.slots,
+        kcal: h.kcal, protein: h.protein, cost: h.cost, source: h.source,
+        updated_at: new Date().toISOString()
+      }))
+    );
+    if(error){ console.error('mergeLocalHistory', error); return 0; }
+    cookedHistory = cookedHistory.concat(fresh);
+    sortHistory();
+  }
+  localStorage.removeItem(HISTORY_KEY);
+  return fresh.length;
+}
+
+async function logCookedDay(day, checked){
+  const di = DAYS.indexOf(day);
+  if(di < 0) return;
+  const cooked_on = isoDate(addDays(parseISO(resolveWeekStart()), di));
+
+  if(!checked){
+    // unticking is a correction, so the row goes rather than becoming done:false
+    cookedHistory = cookedHistory.filter(h=>h.cooked_on !== cooked_on);
+    if(currentUser){
+      const { error } = await supabaseClient.from('cooked_days')
+        .delete().eq('user_id', currentUser.id).eq('cooked_on', cooked_on);
+      if(error) console.error('logCookedDay delete', error);
+    } else saveLocalHistory();
+    renderHistoryCard();
+    return;
+  }
+
+  const rec = cookedRecordFor(di, cooked_on);
+  cookedHistory = cookedHistory.filter(h=>h.cooked_on !== cooked_on).concat(rec);
+  sortHistory();
+  if(currentUser){
+    const { error } = await supabaseClient.from('cooked_days').upsert(
+      { user_id: currentUser.id, ...rec, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,cooked_on' }
+    );
+    if(error) console.error('logCookedDay upsert', error);
+  } else saveLocalHistory();
+  renderHistoryCard();
+}
+
+function historyStats(){
+  const days = new Set(cookedHistory.map(h=>h.cooked_on));
+
+  /* Streak walks backward from today — and from yesterday if today isn't ticked
+     yet, so an unticked today doesn't read as a broken streak at breakfast. */
+  let cursor = new Date();
+  if(!days.has(isoDate(cursor))) cursor = addDays(cursor, -1);
+  let current = 0;
+  while(days.has(isoDate(cursor))){ current++; cursor = addDays(cursor, -1); }
+
+  let longest = 0, run = 0, prev = null;
+  [...days].sort().forEach(d=>{
+    run = (prev && daysBetween(prev, d) === 1) ? run + 1 : 1;
+    if(run > longest) longest = run;
+    prev = d;
+  });
+
+  const monthPrefix = isoDate(new Date()).slice(0, 7);
+  const thisMonth = cookedHistory.filter(h=>h.cooked_on.startsWith(monthPrefix));
+  const mealCount = list => list.reduce((s,h)=>s + Object.keys(h.meals || {}).length, 0);
+
+  return {
+    current, longest,
+    daysThisMonth: thisMonth.length,
+    mealsThisMonth: mealCount(thisMonth),
+    totalDays: days.size,
+    totalMeals: mealCount(cookedHistory)
+  };
+}
+
+function renderHistoryCard(){
+  const sec = document.getElementById('historySection');
+  const panel = document.getElementById('historyPanel');
+  const hint = document.getElementById('historyHint');
+  if(!sec || !panel) return;
+
+  if(historyError){
+    sec.style.display = '';
+    hint.textContent = '';
+    panel.innerHTML = `<p class="hint plans-empty">Couldn't load your cooking history: ${historyError}. Try refreshing the page.</p>`;
+    return;
+  }
+  // nothing logged yet — an empty card is just noise on a fresh visit
+  if(!cookedHistory.length){ sec.style.display = 'none'; return; }
+  sec.style.display = '';
+
+  const s = historyStats();
+  hint.textContent = s.current
+    ? `${s.current} day${s.current!==1?'s':''} in a row`
+    : `${s.totalDays} day${s.totalDays!==1?'s':''} logged`;
+
+  const byDate = {};
+  cookedHistory.forEach(h=>{ byDate[h.cooked_on] = h; });
+
+  const thisMonday = mondayOf(new Date());
+  const rows = [];
+  for(let w = 0; w < 12; w++){
+    const start = addDays(thisMonday, -7 * w);
+    const dots = DAYS.map((d, i)=>{
+      const iso = isoDate(addDays(start, i));
+      const rec = byDate[iso];
+      const meals = rec ? Object.values(rec.meals || {}) : [];
+      const title = rec
+        ? `${d} ${shortDate(iso)} — cooked${meals.length ? ': ' + meals.join(', ') : ''}`
+        : `${d} ${shortDate(iso)} — not logged`;
+      return `<span class="cooked-dot ${rec?'done':''}" title="${escAttr(title)}">${d.slice(0,1)}</span>`;
+    }).join('');
+    const label = w === 0 ? 'This week' : `w/c ${shortDate(isoDate(start))}`;
+    rows.push(`<div class="hist-row"><span class="wk">${label}</span><span class="cooked-meter light">${dots}</span></div>`);
+  }
+
+  /* Every figure here is a count of days and meals you logged. We celebrate
+     cooking, never calorie adherence. */
+  panel.innerHTML = `
+    <div class="hist-stats">
+      <span class="hist-stat"><b class="herb">${s.current}</b>Day streak</span>
+      <span class="hist-stat"><b>${s.longest}</b>Longest streak</span>
+      <span class="hist-stat"><b class="orange">${s.daysThisMonth}</b>Days this month</span>
+      <span class="hist-stat"><b>${s.totalMeals}</b>Meals cooked</span>
+    </div>
+    <p class="hint" style="margin:0 0 14px;">Every day you tick off in the cooking checklist is kept here. A streak counts consecutive days you cooked — today doesn't count against you until it's over.${s.mealsThisMonth ? ` That's <strong>${s.mealsThisMonth}</strong> home-made meal${s.mealsThisMonth!==1?'s':''} this month.` : ''}</p>
+    <div class="hist-grid">${rows.join('')}</div>
+    ${currentUser ? '' : `<p class="hint" style="margin:14px 0 0;">This is saved on this device only. <a href="#" onclick="document.getElementById('showAuthBtn').click();return false;" style="color:var(--orange-deep);font-weight:600;">Create a free account</a> and it moves across with you — nothing is lost.</p>`}
+  `;
 }
 
 /* ---------- Account bar wiring ---------- */
@@ -1903,6 +2208,8 @@ async function loadPlan(name){
   render();
   const exact = cfg.week ? restoreExactWeek(cfg.week) : false;
   if(!exact) buildWeek();
+  // loading an old plan means cooking it now, not re-dating it to when it was saved
+  planWeekStart = currentMonday();
   showToast(exact ? `Loaded "${name}" — your exact meals are back.` : `Loaded "${name}" — rebuilt from its settings.`);
   document.getElementById('myPlansSection').open = false;
   const weekPanel = document.getElementById('weekPanel');
@@ -2485,6 +2792,9 @@ function buildWeek(){
   });
 
   weekState = { candidatesBySlot, planIndex, activeSlots: activeSlots.slice(), weeklyBudget, pinNote };
+  // a freshly built week is the week you're in now — this anchors day ticks to
+  // real dates in the history ledger
+  planWeekStart = currentMonday();
   renderWeekUI();
   saveProfileSoon();
   snapshotLastWeek();
@@ -2793,19 +3103,25 @@ function printShoppingList(){
 
 function renderProgressHTML(){
   const doneCount = DAYS.filter(d=>progress[d]).length;
-  const days = DAYS.map(d=>`
-    <label class="progress-day">
+  const start = resolveWeekStart();
+  const days = DAYS.map((d, i)=>{
+    const iso = isoDate(addDays(parseISO(start), i));
+    return `
+    <label class="progress-day" title="${d} ${shortDate(iso)}">
       <input type="checkbox" ${progress[d]?'checked':''} onchange="toggleProgress('${d}', this.checked)">
       ${d.slice(0,3)}
-    </label>`).join('');
+    </label>`;
+  }).join('');
+  const streak = historyStats().current;
   return `
   <div class="progress-block">
     <div class="results-head" style="margin:0 0 4px;border:none;padding:0;">
       <h2 style="font-size:20px;">This week's cooking checklist</h2>
       <span class="results-count">${doneCount}/7 days</span>
     </div>
-    <p class="hint">Tick off each day you cook from the plan. <a href="#" onclick="resetProgress();return false;" style="color:var(--herb);">Reset for a new week</a></p>
+    <p class="hint">Tick off each day you cook from the plan — week commencing ${shortDate(start)}. Ticked days are kept in your cooking history, so resetting the checklist for a new week doesn't lose them. <a href="#" onclick="resetProgress();return false;" style="color:var(--herb);">Reset for a new week</a></p>
     <div class="progress-days">${days}</div>
+    ${streak ? `<p class="hint" style="margin-top:12px;color:var(--herb);font-weight:600;">🔥 ${streak} day${streak!==1?'s':''} cooked in a row.</p>` : ''}
   </div>`;
 }
 
@@ -3347,6 +3663,9 @@ document.getElementById('results').innerHTML = '<div class="empty">Loading recip
   favourites = currentUser ? await loadFavourites() : [];
   progress = currentUser ? await loadProgress() : {};
   savedPlans = currentUser ? await loadSavedPlans() : {};
+  cookedHistory = await loadHistory();
+  if(currentUser) await mergeLocalHistory();
+  renderHistoryCard();
   renderSavedPlansList();
   restoreProfileOnce();
   restoreLastWeek();
