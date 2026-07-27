@@ -1461,9 +1461,11 @@ function renderModalCard(){
   if(!modalRecipe) return;
   const body = document.getElementById('recipeModalBody');
   body.innerHTML = cardHTML(modalRecipe, null, null, '');
-  // open the full recipe + ingredients by default inside the modal
-  body.querySelectorAll('.recipe-panel, .ingredients').forEach(el=>el.classList.add('open'));
-  body.querySelectorAll('.ing-toggle').forEach(el=>el.classList.add('open'));
+  /* Open the full recipe (ingredients + method + meal prep) — that is what you
+     came to the popup for. The "where to buy" disclosure stays shut on purpose:
+     it lists the same ingredients again, just with shop links, so opening both
+     printed the whole list twice. It is one click away if you want it. */
+  body.querySelectorAll('.recipe-panel').forEach(el=>el.classList.add('open'));
 }
 function openHeroRecipe(){
   const r = heroRotation.list[heroRotation.idx];
