@@ -102,13 +102,9 @@ module.exports = async (req, res) => {
     }
     return res.status(200).json({ url: session.url });
   } catch (err) {
+    // Detail goes to the Vercel log, not to the browser — an error message on a
+    // public endpoint can leak how the backend is put together.
     console.error('create-checkout', err);
-    // TEMPORARY: surface the real reason while we get the integration working.
-    // Replace with the generic message before taking real payments.
-    return res.status(500).json({
-      error: 'Could not start checkout',
-      debug: String(err && err.message || err),
-      where: err && err.stack ? String(err.stack).split('\n')[1] : null
-    });
+    return res.status(500).json({ error: 'Could not start checkout' });
   }
 };

@@ -1278,7 +1278,11 @@ async function startCheckout(plan){
       body: JSON.stringify({ plan })
     });
     const out = await r.json();
-    if(!r.ok || !out.url){ msg.textContent = out.error || 'Could not start checkout. Please try again.'; return; }
+    if(!r.ok || !out.url){
+      msg.textContent = out.error || 'Could not start checkout. Please try again.';
+      console.error('checkout failed', out);
+      return;
+    }
     window.location.href = out.url;   // hand off to Stripe
   }catch(e){
     console.error('startCheckout', e);
