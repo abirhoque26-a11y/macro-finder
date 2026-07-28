@@ -16,6 +16,11 @@
 
 const crypto = require('crypto');
 
+/* Environment values get pasted by hand, and a stray leading space or trailing
+   newline makes an HTTP header invalid — which fails as an opaque TypeError far
+   from the cause. Trim everything on the way in. */
+const env = n => (process.env[n] || '').trim();
+
 // Stripe signs the exact bytes it sent, so the body must not be re-serialised.
 module.exports.config = { api: { bodyParser: false } };
 
@@ -51,7 +56,8 @@ function verify(raw, header, secret) {
 const iso = s => (s ? new Date(s * 1000).toISOString() : null);
 
 async function upsert(row) {
-  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+  const SUPABASE_URL = env('SUPABASE_URL').replace(/\/+$/, '');
+  const SUPABASE_SERVICE_ROLE_KEY = env('SUPABASE_SERVICE_ROLE_KEY');
   const r = await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?on_conflict=user_id`, {
     method: 'POST',
     headers: {
@@ -67,7 +73,7 @@ async function upsert(row) {
 
 async function stripeGet(path) {
   const r = await fetch(`https://api.stripe.com/v1/${path}`, {
-    headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` }
+    headers: { Authorization: `Bearer ${env('STRIPE_SECRET_KEY')}` }
   });
   if (!r.ok) throw new Error(`stripe ${path} ${r.status}`);
   return r.json();
@@ -92,8 +98,8 @@ module.exports = async (req, res) => {
     res.setHeader('Allow', 'POST');
     return res.status(405).end();
   }
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  const secret = env('STRIPE_WEBHOOK_SECRET');
+  if (!secret || !env('SUPABASE_SERVICE_ROLE_KEY')) {
     console.error('stripe-webhook: missing environment variables');
     return res.status(500).end();
   }

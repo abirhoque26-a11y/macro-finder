@@ -8,16 +8,22 @@
  *           SUPABASE_SERVICE_ROLE_KEY, SITE_URL
  */
 
+/* Environment values get pasted by hand, and a stray leading space or trailing
+   newline makes an HTTP header invalid — which fails as an opaque TypeError far
+   from the cause. Trim everything on the way in. */
+const env = n => (process.env[n] || '').trim();
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const {
-    STRIPE_SECRET_KEY, SUPABASE_URL, SUPABASE_ANON_KEY,
-    SUPABASE_SERVICE_ROLE_KEY, SITE_URL
-  } = process.env;
+  const STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY');
+  const SUPABASE_URL = env('SUPABASE_URL').replace(/\/+$/, '');
+  const SUPABASE_ANON_KEY = env('SUPABASE_ANON_KEY');
+  const SUPABASE_SERVICE_ROLE_KEY = env('SUPABASE_SERVICE_ROLE_KEY');
+  const SITE_URL = env('SITE_URL');
 
   try {
     const auth = req.headers.authorization || '';

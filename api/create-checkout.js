@@ -28,16 +28,23 @@ function form(obj, prefix, out) {
   return out;
 }
 
+/* Environment values get pasted by hand, and a stray leading space or trailing
+   newline makes an HTTP header invalid — which fails as an opaque TypeError far
+   from the cause. Trim everything on the way in. */
+const env = n => (process.env[n] || '').trim();
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const {
-    STRIPE_SECRET_KEY, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY,
-    SUPABASE_URL, SUPABASE_ANON_KEY, SITE_URL
-  } = process.env;
+  const STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY');
+  const STRIPE_PRICE_MONTHLY = env('STRIPE_PRICE_MONTHLY');
+  const STRIPE_PRICE_YEARLY = env('STRIPE_PRICE_YEARLY');
+  const SUPABASE_URL = env('SUPABASE_URL').replace(/\/+$/, '');
+  const SUPABASE_ANON_KEY = env('SUPABASE_ANON_KEY');
+  const SITE_URL = env('SITE_URL');
 
   if (!STRIPE_SECRET_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.error('create-checkout: missing environment variables');
@@ -96,6 +103,12 @@ module.exports = async (req, res) => {
     return res.status(200).json({ url: session.url });
   } catch (err) {
     console.error('create-checkout', err);
-    return res.status(500).json({ error: 'Could not start checkout' });
+    // TEMPORARY: surface the real reason while we get the integration working.
+    // Replace with the generic message before taking real payments.
+    return res.status(500).json({
+      error: 'Could not start checkout',
+      debug: String(err && err.message || err),
+      where: err && err.stack ? String(err.stack).split('\n')[1] : null
+    });
   }
 };
