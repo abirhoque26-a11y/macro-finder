@@ -146,6 +146,8 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 
 /* ---------- Pro / upgrade ---------- */
 .pro-badge{background:var(--gold);color:var(--ink);font-family:'Oswald',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;padding:4px 9px;border-radius:999px;}
+/* cancelled-but-still-active reads as a wind-down, not a status to celebrate */
+.pro-badge.ending{background:transparent;color:var(--muted);border:1.5px solid var(--line-strong);}
 .pro-modal-inner{max-width:520px;}
 .pro-box{background:var(--card);border:1.5px solid var(--ink);border-radius:8px;padding:32px 30px;}
 .pro-eyebrow{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange-deep);margin:0 0 12px;}
@@ -1332,10 +1334,25 @@ function updateProUI(){
   if(badge){
     const on = isPro();
     badge.style.display = on ? 'inline-block' : 'none';
-    badge.textContent = isTrialing() ? `Trial · ${trialDaysLeft()}d` : 'Pro';
-    badge.title = isTrialing()
-      ? `Your free trial ends in ${trialDaysLeft()} day(s)`
-      : 'Macro Mastery Pro';
+    /* Cancelling leaves you on 'trialing' or 'active' until the period runs out —
+       correct, but a badge that still reads "Trial · 3d" looks like the cancel
+       did nothing. Say plainly that it is ending, and when. */
+    const ending = subscription && subscription.cancel_at_period_end;
+    const until = subscription && (subscription.trial_end || subscription.current_period_end);
+    const untilStr = until
+      ? new Date(until).toLocaleDateString('en-GB', { day:'numeric', month:'short' })
+      : '';
+    if(ending){
+      badge.textContent = `Ends ${untilStr}`;
+      badge.classList.add('ending');
+      badge.title = `Cancelled — you keep Pro until ${untilStr}, then nothing further is charged.`;
+    } else {
+      badge.classList.remove('ending');
+      badge.textContent = isTrialing() ? `Trial · ${trialDaysLeft()}d` : 'Pro';
+      badge.title = isTrialing()
+        ? `Your free trial ends in ${trialDaysLeft()} day(s)`
+        : 'Macro Mastery Pro';
+    }
   }
   const bill = document.getElementById('billingBtn');
   const up = document.getElementById('upgradeBtn');
