@@ -143,6 +143,34 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .recipe-modal.open{display:flex;}
 .recipe-modal-inner{max-width:440px;width:100%;position:relative;margin-bottom:44px;}
 .recipe-modal-close{position:absolute;top:-16px;right:-10px;z-index:2;background:var(--cream);border:2px solid var(--ink);color:var(--ink);width:38px;height:38px;border-radius:999px;font-size:15px;cursor:pointer;line-height:1;}
+
+/* ---------- Pro / upgrade ---------- */
+.pro-badge{background:var(--gold);color:var(--ink);font-family:'Oswald',sans-serif;font-weight:700;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;padding:4px 9px;border-radius:999px;}
+.pro-modal-inner{max-width:520px;}
+.pro-box{background:var(--card);border:1.5px solid var(--ink);border-radius:8px;padding:32px 30px;}
+.pro-eyebrow{font-family:'Oswald',sans-serif;font-weight:600;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange-deep);margin:0 0 12px;}
+.pro-title{font-family:'Anton',sans-serif;font-weight:400;font-size:32px;line-height:1.05;text-transform:uppercase;margin:0 0 18px;}
+.pro-list{list-style:none;padding:0;margin:0 0 22px;}
+.pro-list li{position:relative;padding:0 0 10px 26px;font-size:14.5px;line-height:1.55;color:#3F3B2F;}
+.pro-list li::before{content:'✓';position:absolute;left:0;top:0;color:var(--orange);font-weight:700;}
+.pro-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 16px;}
+.pro-plan{position:relative;background:var(--cream);border:1.5px solid var(--ink);border-radius:6px;padding:18px 14px;cursor:pointer;text-align:left;font-family:'Work Sans',sans-serif;}
+.pro-plan:hover{box-shadow:4px 4px 0 var(--ink);transform:translate(-2px,-2px);}
+.pro-plan.best{background:var(--ink);}
+.pro-plan.best .pp-price,.pro-plan.best .pp-note{color:var(--cream);}
+.pp-tag{position:absolute;top:-9px;right:10px;background:var(--gold);color:var(--ink);font-family:'Oswald',sans-serif;font-weight:700;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:999px;}
+.pp-price{display:block;font-family:'Anton',sans-serif;font-size:26px;line-height:1;color:var(--ink);}
+.pp-price em{font-family:'Work Sans',sans-serif;font-style:normal;font-size:12px;font-weight:500;}
+.pp-note{display:block;margin-top:6px;font-size:11.5px;color:var(--muted);}
+.pro-trial{font-size:13px;line-height:1.6;color:#3F3B2F;margin:0 0 10px;}
+.pro-small{font-size:11.5px;line-height:1.6;color:var(--muted);margin:0 0 6px;}
+.pro-small a{color:var(--orange-deep);}
+/* Locked panels: visible but inert, so people can see what they would get */
+.pro-lock{background:var(--card);border:1.5px dashed var(--line-strong);border-radius:8px;padding:26px 24px;text-align:center;margin:16px 0;}
+.pro-lock h4{font-family:'Anton',sans-serif;font-weight:400;font-size:21px;text-transform:uppercase;margin:0 0 8px;}
+.pro-lock p{font-size:14px;line-height:1.6;color:var(--muted);margin:0 0 16px;max-width:420px;margin-left:auto;margin-right:auto;}
+.trial-note{background:rgba(217,180,74,.22);border:1px solid var(--gold);border-radius:6px;padding:11px 16px;font-size:13px;color:#3F3B2F;margin:0 0 16px;}
+@media(max-width:520px){.pro-plans{grid-template-columns:1fr;}.pro-box{padding:24px 18px;}}
 .recipe-modal-close:hover{background:var(--orange);border-color:var(--orange);color:#FFF6ED;}
 
 /* auto budget swap note */
@@ -556,6 +584,9 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       </div>
       <div class="acct" id="authedBar" style="display:none;">
         <strong id="userEmailDisplay"></strong>
+        <span class="pro-badge" id="proBadge" style="display:none;">Pro</span>
+        <button class="pill-btn ghost" id="billingBtn" type="button" style="display:none;">Billing</button>
+        <button class="pill-btn ghost" id="upgradeBtn" type="button">Go Pro</button>
         <button class="pill-btn ghost" id="signOutBtn" type="button">Sign out</button>
       </div>
       <button class="pill-btn ghost" id="viewPlansBtn" type="button">My plans (<span id="planCount">0</span>)</button>
@@ -659,6 +690,37 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
   <div class="recipe-modal-inner">
     <button class="recipe-modal-close" onclick="closeRecipeModal()" type="button" aria-label="Close">✕</button>
     <div id="recipeModalBody"></div>
+  </div>
+</div>
+
+<div class="recipe-modal" id="proModal" onclick="if(event.target===this)closeProModal()">
+  <div class="recipe-modal-inner pro-modal-inner">
+    <button class="recipe-modal-close" onclick="closeProModal()" type="button" aria-label="Close">✕</button>
+    <div class="pro-box">
+      <p class="pro-eyebrow" id="proWhy">— Macro Mastery Pro</p>
+      <h3 class="pro-title">Plan the whole week,<br>not one meal.</h3>
+      <ul class="pro-list">
+        <li>Your full 7-day plan, built to your calorie and protein targets</li>
+        <li>One shopping list for the week, priced across five UK supermarkets</li>
+        <li>Save and reload as many plans as you like</li>
+        <li>Cooking history, streaks and monthly totals</li>
+        <li>What can I make from my cupboard?</li>
+      </ul>
+      <div class="pro-plans">
+        <button class="pro-plan" data-plan="monthly" type="button">
+          <span class="pp-price">£4.99<em>/month</em></span>
+          <span class="pp-note">Cancel anytime</span>
+        </button>
+        <button class="pro-plan best" data-plan="yearly" type="button">
+          <span class="pp-tag">Save 25%</span>
+          <span class="pp-price">£44.99<em>/year</em></span>
+          <span class="pp-note">Works out at £3.75 a month</span>
+        </button>
+      </div>
+      <p class="pro-trial">Both start with a <strong>3-day free trial</strong>. You will not be charged until it ends, and you can cancel in one click before then.</p>
+      <p class="pro-small" id="proMsg"></p>
+      <p class="pro-small">Finding individual recipes and browsing all <span id="proRecipeCount">85</span> recipes stays free, always. By subscribing you agree to our <a href="/terms.html">Terms</a> and <a href="/refund.html">Refund Policy</a>.</p>
+    </div>
   </div>
 </div>
 
@@ -1143,6 +1205,148 @@ if(SUPABASE_URL === 'YOUR_SUPABASE_URL'){
   });
 }
 
+/* ---------- Pro subscription state ----------
+   `subscription` mirrors the user's row in Supabase, written only by the Stripe
+   webhook. The browser can read its own row and nothing else, and has no write
+   policy at all — so this is a display of the truth, not the source of it.
+
+   Gating below runs in the browser, which anyone can bypass with dev tools.
+   That is unavoidable on a static site and is how most freemium web apps work:
+   the gate stops ordinary users, and RLS stops the rest from doing real harm. */
+let subscription = null;
+
+function isPro(){
+  if(!subscription) return false;
+  if(!['trialing', 'active'].includes(subscription.status)) return false;
+  if(subscription.current_period_end && new Date(subscription.current_period_end) < new Date()) return false;
+  return true;
+}
+function isTrialing(){ return !!subscription && subscription.status === 'trialing'; }
+function trialDaysLeft(){
+  if(!isTrialing() || !subscription.trial_end) return 0;
+  return Math.max(0, Math.ceil((new Date(subscription.trial_end) - new Date()) / 86400000));
+}
+
+async function loadSubscription(){
+  if(!currentUser){ subscription = null; return; }
+  const { data, error } = await supabaseClient
+    .from('subscriptions')
+    .select('status, price_id, trial_end, current_period_end, cancel_at_period_end')
+    .eq('user_id', currentUser.id)
+    .maybeSingle();
+  if(error){ console.error('loadSubscription', error); subscription = null; return; }
+  subscription = data || null;
+}
+
+/* Opens the upgrade dialog. `why` names the feature that prompted it, so the
+   dialog answers "why am I seeing this?" rather than appearing out of nowhere. */
+function openProModal(why){
+  if(!currentUser){
+    document.getElementById('showAuthBtn').click();
+    document.getElementById('authMsg').textContent = 'Create a free account first — then you can start your 3-day trial.';
+    return;
+  }
+  document.getElementById('proWhy').textContent = why ? `— ${why} is part of Pro` : '— Macro Mastery Pro';
+  document.getElementById('proMsg').textContent = '';
+  const n = document.getElementById('proRecipeCount');
+  if(n && RECIPES.length) n.textContent = RECIPES.length;
+  document.getElementById('proModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeProModal(){
+  document.getElementById('proModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* The single gate. Returns true if the action may proceed; otherwise explains
+   why not and stops the caller. */
+function requirePro(feature){
+  if(isPro()) return true;
+  openProModal(feature);
+  return false;
+}
+
+async function startCheckout(plan){
+  const msg = document.getElementById('proMsg');
+  msg.textContent = 'Opening secure checkout…';
+  try{
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(!session){ msg.textContent = 'Please sign in again.'; return; }
+    const r = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ plan })
+    });
+    const out = await r.json();
+    if(!r.ok || !out.url){ msg.textContent = out.error || 'Could not start checkout. Please try again.'; return; }
+    window.location.href = out.url;   // hand off to Stripe
+  }catch(e){
+    console.error('startCheckout', e);
+    msg.textContent = 'Could not reach the payment server. Check your connection and try again.';
+  }
+}
+
+async function openBillingPortal(){
+  try{
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(!session) return;
+    const r = await fetch('/api/portal', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+    const out = await r.json();
+    if(out.url) window.location.href = out.url;
+    else showToast(out.error || 'Could not open billing.');
+  }catch(e){ showToast('Could not open billing.'); }
+}
+
+/* Stripe sends people back here after checkout. The webhook usually lands first,
+   but not always — so on success we poll briefly rather than telling someone
+   their payment did not work when it did. */
+async function handleUpgradeReturn(){
+  const q = new URLSearchParams(location.search);
+  if(!q.has('upgraded') && !q.has('upgrade_cancelled')) return;
+  history.replaceState({}, '', location.pathname);
+  if(q.has('upgrade_cancelled')){ showToast('Checkout cancelled — nothing was charged.'); return; }
+
+  for(let i = 0; i < 6 && !isPro(); i++){
+    await new Promise(r=>setTimeout(r, 1000));
+    await loadSubscription();
+  }
+  updateProUI();
+  if(isPro()){
+    showToast('✓ Welcome to Pro — your 3-day trial has started.');
+    render();
+  } else {
+    showToast('Payment received. Your account is still updating — refresh in a moment.');
+  }
+}
+
+/* Reflects subscription state everywhere it shows. Safe to call at any time. */
+function updateProUI(){
+  const badge = document.getElementById('proBadge');
+  if(badge){
+    const on = isPro();
+    badge.style.display = on ? 'inline-block' : 'none';
+    badge.textContent = isTrialing() ? `Trial · ${trialDaysLeft()}d` : 'Pro';
+    badge.title = isTrialing()
+      ? `Your free trial ends in ${trialDaysLeft()} day(s)`
+      : 'Macro Mastery Pro';
+  }
+  const bill = document.getElementById('billingBtn');
+  const up = document.getElementById('upgradeBtn');
+  if(bill) bill.style.display = subscription ? 'inline-block' : 'none';
+  if(up) up.style.display = isPro() ? 'none' : 'inline-block';
+  renderChecklistCard();
+  renderHistoryCard();
+  renderSavedPlansList();
+}
+document.getElementById('billingBtn').addEventListener('click', openBillingPortal);
+document.getElementById('upgradeBtn').addEventListener('click', ()=>openProModal(''));
+
+document.querySelectorAll('#proModal .pro-plan').forEach(b=>
+  b.addEventListener('click', ()=>startCheckout(b.dataset.plan)));
+
 function updateAuthUI(){
   const signedIn = !!currentUser;
   document.getElementById('guestBar').style.display = signedIn ? 'none' : 'flex';
@@ -1224,6 +1428,8 @@ supabaseClient.auth.onAuthStateChange(async (event, session)=>{
     document.getElementById('authMsg').textContent = 'You followed a password reset link — choose your new password above.';
     document.getElementById('authRow').scrollIntoView({behavior:'smooth', block:'center'});
   }
+  await loadSubscription();
+  updateProUI();
   favourites = currentUser ? await loadFavourites() : [];
   progress = currentUser ? await loadProgress() : {};
   savedPlans = currentUser ? await loadSavedPlans() : {};
@@ -1383,11 +1589,11 @@ document.getElementById('heroStartBtn').addEventListener('click', ()=>{
 const MODE_COPY = {
   quick: {
     title: 'One week.<br><span class="accent">Planned in a minute.</span>',
-    explain: '<strong>You get a full 7-day plan</strong> — every meal chosen for your calorie and protein targets, plus one shopping list for the whole week. Set your targets below and we will build it. You can swap any meal afterwards.'
+    explain: '<strong>You get a full 7-day plan</strong> — every meal chosen for your calorie and protein targets, plus one shopping list for the whole week. Part of <strong>Pro</strong>, which starts with a 3-day free trial.'
   },
   advanced: {
     title: 'One meal.<br><span class="accent">Matched to your macros.</span>',
-    explain: '<strong>You get a list of single recipes</strong> that fit one meal — useful when you just want an idea for tonight\'s dinner rather than a whole week. Four short steps, then your matches appear below.'
+    explain: '<strong>You get a list of single recipes</strong> that fit one meal — useful when you just want an idea for tonight\'s dinner rather than a whole week. <strong>Free, always.</strong>'
   }
 };
 function setPlanMode(mode){
@@ -1401,6 +1607,7 @@ function setPlanMode(mode){
 document.querySelectorAll('#modeToggle button').forEach(b=>b.addEventListener('click', ()=>setPlanMode(b.dataset.mode)));
 
 document.getElementById('quickBuildBtn').addEventListener('click', ()=>{
+  if(!requirePro('The 7-day planner')) return;
   const msg = document.getElementById('quickMsg');
   const w = parseFloat(document.getElementById('weight').value);
   if(!w || w <= 0){
@@ -1784,7 +1991,10 @@ function planNextWeek(){
   showToast(rotated.length ? `Next week ready — ${rotated.length} meal${rotated.length!==1?'s':''} rotated` : 'Next week ready');
   document.getElementById('weekPanel').scrollIntoView({behavior:'smooth', block:'start'});
 }
-document.getElementById('planNextWeekBtn').addEventListener('click', planNextWeek);
+document.getElementById('planNextWeekBtn').addEventListener('click', ()=>{
+  if(!requirePro('The 7-day planner')) return;
+  planNextWeek();
+});
 
 function restoreProfileOnce(){
   if(profileApplied) return;
@@ -2143,6 +2353,14 @@ function renderHistoryCard(){
     panel.innerHTML = `<p class="hint plans-empty">Couldn't load your cooking history: ${historyError}. Try refreshing the page.</p>`;
     return;
   }
+  if(!isPro()){
+    sec.style.display = '';
+    hint.textContent = 'Pro';
+    panel.innerHTML = `<div class="pro-lock"><h4>Cooking history is part of Pro</h4>
+      <p>Every day you tick off is kept permanently — streaks, monthly totals and a 12-week grid of what you actually cooked.</p>
+      <button class="btn small" type="button" onclick="openProModal('Cooking history')">Start 3-day free trial</button></div>`;
+    return;
+  }
   // nothing logged yet — an empty card is just noise on a fresh visit
   if(!cookedHistory.length){ sec.style.display = 'none'; return; }
   sec.style.display = '';
@@ -2340,6 +2558,13 @@ function renderSavedPlansList(){
   if(!currentUser){
     countHint.textContent = '';
     panel.innerHTML = `<p class="hint plans-empty">Sign in to save weekly plans and load them here anytime. <a href="#" onclick="document.getElementById('authRow').classList.add('show'); document.getElementById('showAuthBtn').scrollIntoView({behavior:'smooth', block:'center'}); return false;" style="color:var(--orange-deep);">Sign in or create a free account</a>.</p>`;
+    return;
+  }
+  if(!isPro()){
+    countHint.textContent = 'Pro';
+    panel.innerHTML = `<div class="pro-lock"><h4>Saved plans are part of Pro</h4>
+      <p>Save a week you liked and reload it any time — targets, preferences and meals intact.</p>
+      <button class="btn small" type="button" onclick="openProModal('Saved plans')">Start 3-day free trial</button></div>`;
     return;
   }
   if(savedPlansError){
@@ -2867,6 +3092,7 @@ document.getElementById('findBtn').addEventListener('click', ()=>{
 
 /* ---------- Weekly plan: build, swap, shopping list, progress, search ---------- */
 document.getElementById('weekYes').addEventListener('click', ()=>{
+  if(!requirePro('The 7-day planner')) return;
   document.getElementById('weekPanel').style.display = 'block';
   document.getElementById('weekPanel').scrollIntoView({behavior:'smooth', block:'start'});
 });
@@ -3269,7 +3495,8 @@ function renderChecklistCard(){
 
   const hasPlan = !!(weekState.activeSlots && weekState.activeSlots.length);
   const everUsed = hasPlan || !!lastWeek || DAYS.some(d=>progress[d]) || cookedHistory.length > 0;
-  if(!everUsed){ sec.style.display = 'none'; return; }
+  // the checklist writes the history ledger, so it travels with Pro
+  if(!isPro() || !everUsed){ sec.style.display = 'none'; return; }
   sec.style.display = '';
 
   const doneCount = DAYS.filter(d=>progress[d]).length;
@@ -3604,7 +3831,10 @@ function renderWeekUI(){
   applyPlanSearchHighlight();
 }
 
-document.getElementById('buildWeekBtn').addEventListener('click', ()=>{ nextWeekMsg = ''; buildWeek(); });
+document.getElementById('buildWeekBtn').addEventListener('click', ()=>{
+  if(!requirePro('The 7-day planner')) return;
+  nextWeekMsg = ''; buildWeek();
+});
 
 /* ---------- What can I cook? (pantry reverse-lookup) ----------
    The user ticks or types what's in their kitchen; we score every recipe by
@@ -3836,6 +4066,9 @@ document.getElementById('results').innerHTML = '<div class="empty">Loading recip
   const { data: { session } } = await supabaseClient.auth.getSession();
   currentUser = session ? session.user : null;
   updateAuthUI();
+  await loadSubscription();
+  updateProUI();
+  handleUpgradeReturn();
   favourites = currentUser ? await loadFavourites() : [];
   progress = currentUser ? await loadProgress() : {};
   savedPlans = currentUser ? await loadSavedPlans() : {};

@@ -421,7 +421,8 @@ def main():
     today = date.today().isoformat()
     urls = [(f"{SITE}/", "1.0"), (f"{SITE}/recipes/", "0.9"),
             (f"{SITE}/about.html", "0.5"), (f"{SITE}/contact.html", "0.4"),
-            (f"{SITE}/privacy.html", "0.3")]
+            (f"{SITE}/privacy.html", "0.3"), (f"{SITE}/terms.html", "0.3"),
+            (f"{SITE}/refund.html", "0.3")]
     urls += [(f"{SITE}/recipes/{slugify(r['name'])}.html", "0.8") for r in recipes]
     entries = "".join(
         f"\n  <url><loc>{u}</loc><lastmod>{today}</lastmod><priority>{p}</priority></url>"
