@@ -55,10 +55,40 @@ img{max-width:100%;}
 .nav-account{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
 .nav-account .acct{display:flex;gap:10px;align-items:center;font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.06em;color:var(--muted);}
 .nav-account strong{color:var(--ink);font-weight:600;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.pill-btn{background:var(--ink);color:var(--cream);border:1.5px solid var(--ink);font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:10px 24px;border-radius:999px;cursor:pointer;}
-.pill-btn:hover{background:var(--orange);border-color:var(--orange);}
+/* Header buttons are ranked rather than uniform: the paid action shouts, the
+   utility buttons sit back, and signing out is nearly invisible until you look
+   for it. Hover borrows the offset-shadow lift used on cards elsewhere. */
+.pill-btn{background:var(--ink);color:var(--cream);border:1.5px solid var(--ink);font-family:'Oswald',sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:10px 24px;border-radius:999px;cursor:pointer;line-height:18px;transition:background .14s,color .14s,border-color .14s,box-shadow .14s,transform .14s;}
+.pill-btn:hover{background:var(--orange);border-color:var(--orange);box-shadow:3px 3px 0 var(--ink);transform:translate(-1px,-1px);}
+.pill-btn:active{box-shadow:none;transform:translate(0,0);}
+
+/* secondary: outlined, fills on hover */
 .pill-btn.ghost{background:transparent;color:var(--ink);}
-.pill-btn.ghost:hover{background:var(--ink);color:var(--cream);}
+.pill-btn.ghost:hover{background:var(--ink);color:var(--cream);border-color:var(--ink);}
+
+/* the money button */
+.pill-btn.cta{background:var(--orange);border-color:var(--orange);color:#FFF6ED;}
+.pill-btn.cta:hover{background:var(--orange-deep);border-color:var(--orange-deep);}
+
+/* "Go Pro" — gold ties it to the Pro badge, so the button and the thing it buys
+   read as the same object. A slow sheen crosses it; inverts to ink on hover. */
+.pill-btn.pro{position:relative;overflow:hidden;background:linear-gradient(135deg,#E4C264 0%,var(--gold) 45%,#C9A238 100%);border-color:var(--ink);color:var(--ink);font-weight:700;padding-left:20px;}
+.pill-btn.pro .spark{margin-right:6px;}
+.pill-btn.pro::after{content:'';position:absolute;top:-60%;left:-70%;width:38%;height:220%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.72),transparent);
+  transform:rotate(18deg);animation:proSheen 4.5s ease-in-out infinite;pointer-events:none;}
+@keyframes proSheen{0%,72%{left:-70%;}92%,100%{left:130%;}}
+.pill-btn.pro:hover{background:var(--ink);border-color:var(--ink);color:var(--gold);}
+.pill-btn.pro:hover::after{animation:none;opacity:0;}
+@media(prefers-reduced-motion:reduce){.pill-btn.pro::after{animation:none;opacity:0;}}
+
+/* tertiary: no chrome at all until hovered */
+.pill-btn.quiet{background:transparent;border-color:transparent;color:var(--muted);padding:10px 14px;letter-spacing:.1em;}
+.pill-btn.quiet:hover{background:transparent;border-color:transparent;color:var(--ink);box-shadow:none;transform:none;text-decoration:underline;text-underline-offset:4px;}
+
+/* count reads as data, not as part of the label */
+.count-chip{display:inline-block;min-width:19px;margin-left:7px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--ink);font-size:10.5px;line-height:18px;letter-spacing:.02em;}
+.pill-btn.ghost:hover .count-chip{background:var(--cream);}
 
 /* ---------- Auth shelf & saved plans ---------- */
 .auth-shelf{max-width:1220px;margin:0 auto;padding:0 28px;}
@@ -547,6 +577,10 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
   .head-inner{padding:12px 18px;}
   .nav-links{gap:13px;row-gap:8px;}
   .nav-links a{font-size:11px;letter-spacing:.1em;}
+  /* three account buttons plus six nav links is a lot of header on a phone */
+  .nav-account{gap:7px;}
+  .pill-btn{padding:9px 15px;font-size:11px;letter-spacing:.1em;}
+  .pill-btn.quiet{padding:9px 8px;}
   .inner, .auth-shelf{padding-left:18px;padding-right:18px;}
   .form-panel, #weekPanel{padding:24px 18px;}
   .week-section{padding:18px 14px;}
@@ -587,11 +621,11 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       <div class="acct" id="authedBar" style="display:none;">
         <strong id="userEmailDisplay"></strong>
         <span class="pro-badge" id="proBadge" style="display:none;">Pro</span>
-        <button class="pill-btn ghost" id="billingBtn" type="button" style="display:none;">Billing</button>
-        <button class="pill-btn ghost" id="upgradeBtn" type="button">Go Pro</button>
-        <button class="pill-btn ghost" id="signOutBtn" type="button">Sign out</button>
+        <button class="pill-btn pro" id="upgradeBtn" type="button"><span class="spark" aria-hidden="true">✦</span>Go Pro</button>
+        <button class="pill-btn quiet" id="billingBtn" type="button" style="display:none;">Billing</button>
+        <button class="pill-btn quiet" id="signOutBtn" type="button">Sign out</button>
       </div>
-      <button class="pill-btn ghost" id="viewPlansBtn" type="button">My plans (<span id="planCount">0</span>)</button>
+      <button class="pill-btn ghost" id="viewPlansBtn" type="button">My plans<span class="count-chip" id="planCount">0</span></button>
     </div>
   </div>
 </header>
