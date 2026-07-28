@@ -60,10 +60,18 @@ const iso = s => (s ? new Date(s * 1000).toISOString() : null);
    may be expressed as `cancel_at` (a timestamp) rather than the older boolean.
    Reading only one spelling fails silently — the write succeeds with a wrong
    value, so nothing errors and the app quietly shows the wrong state. */
+/* Order matters. `cancel_at_period_end` still appears in newer API versions but
+   is deprecated in favour of the `cancel_at` timestamp — and it reads `false`
+   even when a cancellation is scheduled. Checking the boolean first therefore
+   short-circuits and always answers "not cancelling", so the timestamp is
+   checked first and the boolean is only a fallback for older payloads. */
 function cancelsAtPeriodEnd(sub) {
-  if (typeof sub.cancel_at_period_end === 'boolean') return sub.cancel_at_period_end;
+  // `cancel_at` is cleared when a cancellation is reversed, so it tracks the
+  // current intent. `cancellation_details.reason` is deliberately not used —
+  // it can linger after an un-cancel and would report a live subscription as
+  // ending.
   if (sub.cancel_at) return true;
-  if (sub.cancellation_details && sub.cancellation_details.reason) return true;
+  if (typeof sub.cancel_at_period_end === 'boolean') return sub.cancel_at_period_end;
   return false;
 }
 
