@@ -301,8 +301,11 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .btn.secondary{background:transparent;border:1.5px solid var(--ink);color:var(--ink);}
 .btn.secondary:hover{background:var(--ink);color:var(--cream);}
 .btn.small{font-size:11px;padding:9px 20px;}
-#suggestBtn, #wkSuggestBtn{background:var(--gold);border:1.5px solid var(--ink);color:var(--ink);border-radius:5px;}
-#suggestBtn:hover, #wkSuggestBtn:hover{background:#E5C35E;}
+/* Gold is reserved for Pro. The targets calculator is a free tool, so it uses
+   the neutral outlined style — two gold buttons on one page implied the
+   calculator was part of the paid tier. */
+#suggestBtn, #wkSuggestBtn{background:var(--card);border:1.5px solid var(--ink);color:var(--ink);border-radius:5px;}
+#suggestBtn:hover, #wkSuggestBtn:hover{background:var(--ink);color:var(--cream);}
 .actions{margin-top:28px;display:flex;justify-content:flex-end;}
 
 /* ---------- Pantry / results ---------- */
@@ -764,9 +767,9 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
           <span class="pp-note">Cancel anytime</span>
         </button>
         <button class="pro-plan best" data-plan="yearly" type="button">
-          <span class="pp-tag">Save 25%</span>
-          <span class="pp-price">£44.99<em>/year</em></span>
-          <span class="pp-note">Works out at £3.75 a month</span>
+          <span class="pp-tag">Save 33%</span>
+          <span class="pp-price">£39.99<em>/year</em></span>
+          <span class="pp-note">Works out at £3.33 a month</span>
         </button>
       </div>
       <p class="pro-trial">Both start with a <strong>3-day free trial</strong>. You will not be charged until it ends, and you can cancel in one click before then.</p>

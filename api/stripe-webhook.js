@@ -55,47 +55,28 @@ function verify(raw, header, secret) {
 
 const iso = s => (s ? new Date(s * 1000).toISOString() : null);
 
-/* Stripe has moved these fields between API versions: `current_period_end` now
-   lives on the subscription item in newer versions, and a pending cancellation
-   may be expressed as `cancel_at` (a timestamp) rather than the older boolean.
-   Reading only one spelling fails silently — the write succeeds with a wrong
-   value, so nothing errors and the app quietly shows the wrong state. */
-/* Order matters. `cancel_at_period_end` still appears in newer API versions but
-   is deprecated in favour of the `cancel_at` timestamp — and it reads `false`
-   even when a cancellation is scheduled. Checking the boolean first therefore
-   short-circuits and always answers "not cancelling", so the timestamp is
-   checked first and the boolean is only a fallback for older payloads. */
+/* Stripe has moved these fields between API versions, and reading only one
+   spelling fails silently: the write succeeds with a wrong value, nothing
+   errors, and the app quietly shows the wrong state.
+
+   `cancel_at_period_end` still appears but is deprecated in favour of the
+   `cancel_at` timestamp — and it reads `false` even when a cancellation is
+   scheduled. So the timestamp is checked first; the boolean is only a fallback
+   for older payloads. `cancellation_details.reason` is deliberately unused: it
+   can linger after an un-cancel and would report a live subscription as ending. */
 function cancelsAtPeriodEnd(sub) {
-  // `cancel_at` is cleared when a cancellation is reversed, so it tracks the
-  // current intent. `cancellation_details.reason` is deliberately not used —
-  // it can linger after an un-cancel and would report a live subscription as
-  // ending.
   if (sub.cancel_at) return true;
   if (typeof sub.cancel_at_period_end === 'boolean') return sub.cancel_at_period_end;
   return false;
 }
 
+/* `current_period_end` moved onto the subscription item in newer versions. */
 function periodEnd(sub) {
   if (sub.current_period_end) return iso(sub.current_period_end);
   const item = sub.items && sub.items.data && sub.items.data[0];
   if (item && item.current_period_end) return iso(item.current_period_end);
   if (sub.cancel_at) return iso(sub.cancel_at);
   return null;
-}
-
-/* Temporary: shows exactly which of these fields Stripe is sending, so a shape
-   change is visible in the log instead of guessed at. */
-function logShape(sub) {
-  console.log('sub shape', sub.id, JSON.stringify({
-    status: sub.status,
-    cancel_at_period_end: sub.cancel_at_period_end,
-    cancel_at: sub.cancel_at,
-    canceled_at: sub.canceled_at,
-    current_period_end: sub.current_period_end,
-    item_period_end: sub.items?.data?.[0]?.current_period_end,
-    trial_end: sub.trial_end,
-    has_metadata: !!(sub.metadata && sub.metadata.supabase_user_id)
-  }));
 }
 
 async function upsert(row) {
@@ -199,7 +180,6 @@ module.exports = async (req, res) => {
       const uid = o.client_reference_id || (o.metadata && o.metadata.supabase_user_id);
       if (uid && o.subscription) {
         const sub = await stripeGet(`subscriptions/${o.subscription}`);
-        logShape(sub);
         await upsert({
           user_id: uid,
           stripe_customer_id: o.customer,
@@ -212,7 +192,6 @@ module.exports = async (req, res) => {
         });
       }
     } else if (event.type.startsWith('customer.subscription.')) {
-      logShape(o);
       const uid = await userIdFor(o);
       if (uid) {
         await upsert({
@@ -226,7 +205,7 @@ module.exports = async (req, res) => {
           current_period_end: periodEnd(o),
           cancel_at_period_end: cancelsAtPeriodEnd(o)
         });
-        console.log('wrote subscription for', uid, 'cancelsAtPeriodEnd', cancelsAtPeriodEnd(o));
+        console.log('subscription synced', event.type, 'user', uid);
       }
     }
     // Anything else we acknowledge and ignore — Stripe retries non-2xx forever.
