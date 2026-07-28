@@ -55,6 +55,41 @@ function verify(raw, header, secret) {
 
 const iso = s => (s ? new Date(s * 1000).toISOString() : null);
 
+/* Stripe has moved these fields between API versions: `current_period_end` now
+   lives on the subscription item in newer versions, and a pending cancellation
+   may be expressed as `cancel_at` (a timestamp) rather than the older boolean.
+   Reading only one spelling fails silently — the write succeeds with a wrong
+   value, so nothing errors and the app quietly shows the wrong state. */
+function cancelsAtPeriodEnd(sub) {
+  if (typeof sub.cancel_at_period_end === 'boolean') return sub.cancel_at_period_end;
+  if (sub.cancel_at) return true;
+  if (sub.cancellation_details && sub.cancellation_details.reason) return true;
+  return false;
+}
+
+function periodEnd(sub) {
+  if (sub.current_period_end) return iso(sub.current_period_end);
+  const item = sub.items && sub.items.data && sub.items.data[0];
+  if (item && item.current_period_end) return iso(item.current_period_end);
+  if (sub.cancel_at) return iso(sub.cancel_at);
+  return null;
+}
+
+/* Temporary: shows exactly which of these fields Stripe is sending, so a shape
+   change is visible in the log instead of guessed at. */
+function logShape(sub) {
+  console.log('sub shape', sub.id, JSON.stringify({
+    status: sub.status,
+    cancel_at_period_end: sub.cancel_at_period_end,
+    cancel_at: sub.cancel_at,
+    canceled_at: sub.canceled_at,
+    current_period_end: sub.current_period_end,
+    item_period_end: sub.items?.data?.[0]?.current_period_end,
+    trial_end: sub.trial_end,
+    has_metadata: !!(sub.metadata && sub.metadata.supabase_user_id)
+  }));
+}
+
 async function upsert(row) {
   const SUPABASE_URL = env('SUPABASE_URL').replace(/\/+$/, '');
   const SUPABASE_SERVICE_ROLE_KEY = env('SUPABASE_SERVICE_ROLE_KEY');
@@ -156,6 +191,7 @@ module.exports = async (req, res) => {
       const uid = o.client_reference_id || (o.metadata && o.metadata.supabase_user_id);
       if (uid && o.subscription) {
         const sub = await stripeGet(`subscriptions/${o.subscription}`);
+        logShape(sub);
         await upsert({
           user_id: uid,
           stripe_customer_id: o.customer,
@@ -163,11 +199,12 @@ module.exports = async (req, res) => {
           status: sub.status,
           price_id: sub.items?.data?.[0]?.price?.id || null,
           trial_end: iso(sub.trial_end),
-          current_period_end: iso(sub.current_period_end),
-          cancel_at_period_end: !!sub.cancel_at_period_end
+          current_period_end: periodEnd(sub),
+          cancel_at_period_end: cancelsAtPeriodEnd(sub)
         });
       }
     } else if (event.type.startsWith('customer.subscription.')) {
+      logShape(o);
       const uid = await userIdFor(o);
       if (uid) {
         await upsert({
@@ -178,9 +215,10 @@ module.exports = async (req, res) => {
           status: event.type === 'customer.subscription.deleted' ? 'canceled' : o.status,
           price_id: o.items?.data?.[0]?.price?.id || null,
           trial_end: iso(o.trial_end),
-          current_period_end: iso(o.current_period_end),
-          cancel_at_period_end: !!o.cancel_at_period_end
+          current_period_end: periodEnd(o),
+          cancel_at_period_end: cancelsAtPeriodEnd(o)
         });
+        console.log('wrote subscription for', uid, 'cancelsAtPeriodEnd', cancelsAtPeriodEnd(o));
       }
     }
     // Anything else we acknowledge and ignore — Stripe retries non-2xx forever.
