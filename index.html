@@ -4204,14 +4204,38 @@ let pantryItems = [];   // normalised ingredient tokens the user has
 const PANTRY_STAPLES = ['oil','salt','pepper','herb','spice','seasoning','cinnamon','paprika','cumin','turmeric','oregano','thyme','rosemary','basil','chilli flake','chili flake','curry powder','garam masala','soy sauce','vinegar','honey','stock','lemon juice','lime juice','garlic powder','nutritional yeast'];
 
 function normIng(s){ return String(s).toLowerCase().replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim(); }
+
+/* Words that look plural but are not, so naive de-pluralising does not turn
+   hummus into "hummu" or oats into "oat". */
+const ING_NOT_PLURAL = new Set(['hummus','couscous','asparagus','molasses','oats','greens','berries','beans','lentils','peas','seeds','nuts','flakes','leaves','chips','oreos']);
+/* Descriptors that create near-duplicate entries without changing what you would
+   actually have in a cupboard: "frozen peas" and "peas" are the same tick. */
+const ING_FILLER = new Set(['fresh','frozen','tinned','canned','dried','chopped','sliced','diced','minced','grated','cooked','uncooked','raw','large','medium','small','skinless','boneless','ripe','plain','low','reduced','free','range','fat']);
+
+function singularise(w){
+  if(ING_NOT_PLURAL.has(w) || w.length < 4) return w;
+  if(/ies$/.test(w)) return w.slice(0,-3) + 'y';
+  if(/(ches|shes|xes|sses)$/.test(w)) return w.slice(0,-2);
+  if(/oes$/.test(w)) return w.slice(0,-2);
+  if(/[^s]s$/.test(w)) return w.slice(0,-1);
+  return w;
+}
+/* One canonical key per real-world ingredient, so "egg" and "eggs", or "peas"
+   and "frozen peas", collapse into a single chip instead of two. */
+function canonIng(s){
+  const words = normIng(s).split(' ').filter(w=>w && !ING_FILLER.has(w)).map(singularise);
+  return words.join(' ') || normIng(s);
+}
 function isStaple(name){ const n = normIng(name); return PANTRY_STAPLES.some(st=>n.includes(st)); }
 
 function pantryCovers(ingName){
-  const n = normIng(ingName);
-  const nWords = n.split(' ');
+  const n = normIng(ingName), c = canonIng(ingName);
+  const nWords = new Set(n.split(' ').concat(c.split(' ')));
   return pantryItems.some(p=>{
+    const pc = canonIng(p);
     if(n.includes(p) || p.includes(n)) return true;
-    return p.split(' ').some(w=>w.length>3 && nWords.includes(w));
+    if(c.includes(pc) || pc.includes(c)) return true;
+    return pc.split(' ').some(w=>w.length>3 && nWords.has(w));
   });
 }
 
@@ -4312,12 +4336,18 @@ function buildPantryChips(){
   const counts = {};
   RECIPES.forEach(r=>r.ing.forEach(([name])=>{
     if(isStaple(name)) return;
-    const key = normIng(name);
+    const key = canonIng(name);
     if(!key) return;
-    if(!counts[key]) counts[key] = { display: name.toLowerCase(), n: 0 };
+    if(!counts[key]) counts[key] = { spellings: {}, n: 0 };
     counts[key].n++;
+    const disp = normIng(name);
+    counts[key].spellings[disp] = (counts[key].spellings[disp] || 0) + 1;
   }));
-  const top = Object.entries(counts).sort((a,b)=>b[1].n-a[1].n).slice(0,40);
+  // show the wording people will recognise — the one used by most recipes
+  Object.values(counts).forEach(v=>{
+    v.display = Object.entries(v.spellings).sort((a,b)=>b[1]-a[1] || a[0].length-b[0].length)[0][0];
+  });
+  const top = Object.entries(counts).sort((a,b)=>b[1].n-a[1].n).slice(0,72);
   const groups = {};
   top.forEach(([key, v])=>{
     const cat = categorize(v.display);
@@ -4352,11 +4382,14 @@ function renderPantryResults(){
     const need = r.ing.filter(([name])=>!(useStaples && isStaple(name)));
     const missing = need.filter(([name])=>!pantryCovers(name)).map(([name])=>name);
     return { r, total: need.length, have: need.length - missing.length, missing };
-  }).filter(x=>x.total>0 && x.have>0 && x.missing.length<=2);
+  /* A cap of 2 made this section nearly empty for the most common case — one
+     main ingredient typed in. Three is still a small top-up shop, and results
+     are sorted by fewest missing so the best ones stay at the front. */
+  }).filter(x=>x.total>0 && x.have>0 && x.missing.length<=3);
   scored.sort((a,b)=> a.missing.length - b.missing.length || (b.have/b.total) - (a.have/a.total));
 
   const ready = scored.filter(x=>!x.missing.length);
-  const almost = scored.filter(x=>x.missing.length>0).slice(0,9);
+  const almost = scored.filter(x=>x.missing.length>0).slice(0,12);
   const wrap = x => `<div class="pantry-hit">
     <div class="pantry-hit-note ${x.missing.length?'':'ok'}">${x.missing.length ? 'Missing: ' + x.missing.join(', ') : '✓ You have everything'} · ${x.have}/${x.total} ingredients</div>
     ${cardHTML(x.r, null, null, '')}
@@ -4366,7 +4399,7 @@ function renderPantryResults(){
     <div class="results-head" style="margin-top:30px;"><h2>Ready to cook</h2><span class="results-count">${ready.length} recipe${ready.length!==1?'s':''}</span></div>
     ${ready.length ? `<div class="cards">${ready.slice(0,12).map(wrap).join('')}</div>${ready.length>12?`<p class="hint" style="margin-top:10px;">+ ${ready.length-12} more — add or remove ingredients to narrow it down.</p>`:''}`
       : `<div class="empty">Nothing fully covered yet — add a couple more ingredients, or check the near-misses below.</div>`}
-    <div class="results-head" style="margin-top:38px;"><h2>Almost there</h2><span class="results-count">missing 1–2 items</span></div>
+    <div class="results-head" style="margin-top:38px;"><h2>Almost there</h2><span class="results-count">missing 1–3 items</span></div>
     ${almost.length ? `<div class="cards">${almost.map(wrap).join('')}</div>` : `<div class="empty">No near-misses yet.</div>`}
   `;
 }
