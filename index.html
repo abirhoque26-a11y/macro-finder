@@ -1896,7 +1896,7 @@ function renderPinChips(){
   if(!div) return;
   div.innerHTML = pinnedRecipes.map(name=>{
     const r = RECIPES.find(x=>x.name===name);
-    return `<span class="pin-chip">📌 ${name}${r?` <small>${r.meal}</small>`:''}<button type="button" onclick="togglePin('${esc(name)}')" title="Unpin" aria-label="Unpin ${name}">✕</button></span>`;
+    return `<span class="pin-chip">📌 ${escHtml(name)}${r?` <small>${escHtml(r.meal)}</small>`:''}<button type="button" onclick="togglePin('${escJsAttr(name)}')" title="Unpin" aria-label="Unpin ${escAttr(name)}">✕</button></span>`;
   }).join('');
 }
 
@@ -2175,10 +2175,35 @@ function restoreProfileOnce(){
 
 let RECIPES = [];
 
+/* Recipes come from a static file first, and only fall back to the database if
+   that fails.
+
+   Fetching all 101 recipes from Supabase on every page load put a database
+   round trip on the critical path, could not be cached, and was by far the
+   largest consumer of the bandwidth allowance. recipes.json is written by
+   build_recipe_pages.py and served from Vercel's CDN — cached at the edge, no
+   database read at all.
+
+   The Supabase path stays as a safety net: if the file is ever missing or
+   stale-deployed, the app still works rather than showing an empty library. */
 async function loadRecipesFromDB(){
-  const { data, error } = await supabaseClient.from('recipes').select('*');
-  if(error){ console.error(error); return []; }
-  return data.map(row => ({
+  let rows = null;
+  try{
+    const r = await fetch('/recipes.json', { cache: 'default' });
+    if(r.ok){
+      const j = await r.json();
+      if(Array.isArray(j) && j.length) rows = j;
+    }
+  }catch(e){ /* fall through to the database */ }
+
+  if(!rows){
+    console.warn('recipes.json unavailable — falling back to Supabase');
+    const { data, error } = await supabaseClient.from('recipes').select('*');
+    if(error){ console.error(error); return []; }
+    rows = data;
+  }
+
+  return rows.map(row => ({
     name: row.name,
     meal: row.meal,
     diet: row.diet || [],
@@ -2344,6 +2369,32 @@ function mondayOf(d){ const wd = d.getDay(); return addDays(d, wd === 0 ? -6 : 1
 function currentMonday(){ return isoDate(mondayOf(new Date())); }
 function shortDate(iso){ return parseISO(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' }); }
 function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+/* Escapes text before it goes into innerHTML.
+
+   esc() only backslashes quotes for the JS string inside an onclick="" — it does
+   nothing for HTML. Anything a user typed (pantry items, pinned recipe names,
+   saved plan names) was being interpolated raw, so typing an <img onerror=...>
+   as an ingredient executed it. Self-inflicted rather than one user attacking
+   another, since every one of those values is RLS-scoped to its owner — but it
+   also meant a perfectly innocent "M&S houmous" rendered wrong. */
+/* For a JS string literal that sits inside a double-quoted HTML attribute, e.g.
+   onclick="doThing('HERE')". Two layers are needed: escape the value for the JS
+   string, then escape it for the attribute. Doing only the first — which esc()
+   does — lets a double quote in the value close the attribute early and inject
+   a new one, such as onmouseover=. */
+function escJsAttr(s){
+  return escAttr(String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
+
+function escHtml(s){
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 /* Which Monday does "Wednesday" mean? The week the open plan was built for.
    A plan left open for weeks would otherwise write dates for a week nobody is
@@ -2767,10 +2818,10 @@ function renderSavedPlansList(){
     const cfg = savedPlans[name];
     const d = cfg.savedAt ? new Date(cfg.savedAt) : null;
     return `<div class="saved-plan-row">
-      <div><strong>${name}</strong><span class="hint" style="display:block;">${cfg.wkCal||'—'} kcal · ${cfg.wkProtein||'—'}g protein/day${d?(' · saved '+d.toLocaleDateString()):''}</span></div>
+      <div><strong>${escHtml(name)}</strong><span class="hint" style="display:block;">${cfg.wkCal||'—'} kcal · ${cfg.wkProtein||'—'}g protein/day${d?(' · saved '+d.toLocaleDateString()):''}</span></div>
       <div>
-        <button class="btn secondary small" onclick="loadPlan('${esc(name)}')" type="button">Load</button>
-        <button class="btn secondary small" onclick="deletePlan('${esc(name)}')" type="button">Delete</button>
+        <button class="btn secondary small" onclick="loadPlan('${escJsAttr(name)}')" type="button">Load</button>
+        <button class="btn secondary small" onclick="deletePlan('${escJsAttr(name)}')" type="button">Delete</button>
       </div>
     </div>`;
   }).join('');
@@ -3731,7 +3782,7 @@ function renderTodayCard(){
   const inPlan = daysBetween(resolveWeekStart(), todayIso) >= 0 && daysBetween(resolveWeekStart(), todayIso) <= 6;
 
   const meals = planned.length
-    ? `<ul class="today-meals">${planned.map(n=>`<li>${n}</li>`).join('')}</ul>`
+    ? `<ul class="today-meals">${planned.map(n=>`<li>${escHtml(n)}</li>`).join('')}</ul>`
     : `<p class="hint" style="margin:0 0 16px;">No plan open for today — we'll record the day itself.</p>`;
 
   return `
@@ -4354,8 +4405,8 @@ function addPantryFromInput(){
   }
   if(!ingredientKnown(key)){
     const near = suggestIngredients(key);
-    msg.innerHTML = `No recipe uses "<strong>${key}</strong>" — so adding it wouldn't unlock anything.`
-      + (near.length ? ` Did you mean: ${near.map(n=>`<a href="#" onclick="document.getElementById('pantryInput').value='${esc(n)}';addPantryFromInput();return false;" style="color:var(--orange-deep);font-weight:600;">${n}</a>`).join(' · ')}?`
+    msg.innerHTML = `No recipe uses "<strong>${escHtml(key)}</strong>" — so adding it wouldn't unlock anything.`
+      + (near.length ? ` Did you mean: ${near.map(n=>`<a href="#" onclick="document.getElementById('pantryInput').value='${escJsAttr(n)}';addPantryFromInput();return false;" style="color:var(--orange-deep);font-weight:600;">${escHtml(n)}</a>`).join(' · ')}?`
                      : ` Try one of the common ingredients below instead.`);
     return;
   }
@@ -4394,7 +4445,7 @@ function buildPantryChips(){
   document.getElementById('pantryChips').innerHTML = order.filter(c=>groups[c]).map(cat=>`
     <div class="pantry-cat">
       <h5>${cat}</h5>
-      <div class="chips">${groups[cat].map(it=>`<div class="chip ${pantryItems.includes(it.key)?'active':''}" onclick="togglePantryItem('${esc(it.key)}')">${it.display}</div>`).join('')}</div>
+      <div class="chips">${groups[cat].map(it=>`<div class="chip ${pantryItems.includes(it.key)?'active':''}" onclick="togglePantryItem('${escJsAttr(it.key)}')">${it.display}</div>`).join('')}</div>
     </div>`).join('');
 }
 
@@ -4403,7 +4454,7 @@ function renderPantrySelected(){
   if(!pantryItems.length){ div.innerHTML = ''; return; }
   div.innerHTML = `<div class="field form-full" style="margin-top:4px;">
     <label>Your kitchen (${pantryItems.length}) <a href="#" class="pantry-clear" onclick="clearPantry();return false;">clear all</a></label>
-    <div class="chips">${pantryItems.map(k=>`<div class="chip active" onclick="togglePantryItem('${esc(k)}')" title="Remove">${k} ✕</div>`).join('')}</div>
+    <div class="chips">${pantryItems.map(k=>`<div class="chip active" onclick="togglePantryItem('${escJsAttr(k)}')" title="Remove">${escHtml(k)} ✕</div>`).join('')}</div>
   </div>`;
 }
 

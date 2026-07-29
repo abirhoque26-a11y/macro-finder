@@ -11,7 +11,8 @@ Run it whenever recipes change, then commit and push:
 
     python build_recipe_pages.py
 
-Outputs:  recipes/<slug>.html   one per recipe
+Outputs:  recipes.json          static recipe data for the app
+          recipes/<slug>.html   one per recipe
           recipes/index.html    browsable index
           sitemap.xml           every page on the site
           robots.txt            points crawlers at the sitemap
@@ -418,6 +419,22 @@ def main():
     with open(os.path.join(OUT, "index.html"), "w", encoding="utf-8", newline="") as f:
         f.write(index_page(recipes, imgs))
 
+    # A static copy of the recipe library for the app to load.
+    #
+    # Without this, every visitor fetches all recipes from Supabase on page load
+    # — a database round trip on the critical path, uncached, and the single
+    # biggest consumer of the bandwidth allowance. As a file on Vercel it is
+    # served from the CDN edge instead: no database read, no cold query.
+    #
+    # Only the columns index.html actually uses are included, which keeps it
+    # meaningfully smaller than select=*.
+    keep = ("name", "meal", "diet", "skill", "cal", "protein", "price", "pp",
+            "icon", "protein_source", "carb_source", "video", "ingredients",
+            "steps", "meal_prep_friendly", "meal_prep_tip")
+    slim = [{k: r.get(k) for k in keep} for r in recipes]
+    with open(os.path.join(HERE, "recipes.json"), "w", encoding="utf-8", newline="") as f:
+        json.dump(slim, f, ensure_ascii=False, separators=(",", ":"))
+
     today = date.today().isoformat()
     urls = [(f"{SITE}/", "1.0"), (f"{SITE}/recipes/", "0.9"),
             (f"{SITE}/about.html", "0.5"), (f"{SITE}/contact.html", "0.4"),
@@ -438,6 +455,7 @@ def main():
                 f"Sitemap: {SITE}/sitemap.xml\n")
 
     print(f"recipes generated : {len(recipes)}")
+    print(f"recipes.json      : {os.path.getsize(os.path.join(HERE, 'recipes.json'))//1024} KB")
     print(f"index page        : recipes/index.html")
     print(f"sitemap urls      : {len(urls)}")
     print(f"robots.txt        : written")
