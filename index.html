@@ -4306,7 +4306,7 @@ function refreshPantryUI(){
 
 /* ---------- Scroll spy: highlight the nav link for the section in view ---------- */
 (function initScrollSpy(){
-  const ids = ['planner','matches','kitchen','how'];
+  const ids = ['planner','matches','kitchen','progress','how'];
   const links = {};
   ids.forEach(id=>{
     const a = document.querySelector(`.nav-links a[href="#${id}"]`);
@@ -4336,9 +4336,18 @@ function refreshPantryUI(){
     sections.forEach(s=>{ if(s.getBoundingClientRect().top <= LINE) current = s.id; });
     setActive(current);
   }
-  window.addEventListener('scroll', ()=>{
-    if(!ticking){ ticking = true; requestAnimationFrame(updateSpy); }
-  }, { passive:true });
+  /* requestAnimationFrame does not fire in a hidden tab. Scheduling on it alone
+     meant one scroll while backgrounded left `ticking` stuck true and killed the
+     spy for the rest of the page's life. Fall back to a timeout when hidden. */
+  function schedule(){
+    if(ticking) return;
+    ticking = true;
+    if(document.hidden) setTimeout(updateSpy, 0);
+    else requestAnimationFrame(updateSpy);
+  }
+  window.addEventListener('scroll', schedule, { passive:true });
+  window.addEventListener('resize', schedule, { passive:true });
+  document.addEventListener('visibilitychange', ()=>{ ticking = false; updateSpy(); });
   updateSpy();
 })();
 
