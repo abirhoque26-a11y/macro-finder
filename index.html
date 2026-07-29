@@ -1276,11 +1276,15 @@ let subscription = null;
 
 function isPro(){
   if(!subscription) return false;
+  // comped accounts (owner, staff, anyone given free access) bypass Stripe
+  // entirely — the webhook never writes this column, so it survives any
+  // subscription event
+  if(subscription.comped) return true;
   if(!['trialing', 'active'].includes(subscription.status)) return false;
   if(subscription.current_period_end && new Date(subscription.current_period_end) < new Date()) return false;
   return true;
 }
-function isTrialing(){ return !!subscription && subscription.status === 'trialing'; }
+function isTrialing(){ return !!subscription && !subscription.comped && subscription.status === 'trialing'; }
 function trialDaysLeft(){
   if(!isTrialing() || !subscription.trial_end) return 0;
   return Math.max(0, Math.ceil((new Date(subscription.trial_end) - new Date()) / 86400000));
@@ -1290,7 +1294,7 @@ async function loadSubscription(){
   if(!currentUser){ subscription = null; return; }
   const { data, error } = await supabaseClient
     .from('subscriptions')
-    .select('status, price_id, trial_end, current_period_end, cancel_at_period_end')
+    .select('status, price_id, trial_end, current_period_end, cancel_at_period_end, comped')
     .eq('user_id', currentUser.id)
     .maybeSingle();
   if(error){ console.error('loadSubscription', error); subscription = null; return; }
@@ -1395,7 +1399,8 @@ function updateProUI(){
        you what tier you are on. "Ends 31 Jul" on its own says nothing about what
        is ending. Cancelling also leaves you on 'trialing'/'active' until the
        period runs out, so the badge has to show both facts at once. */
-    const ending = subscription && subscription.cancel_at_period_end;
+    // a comp has no end date — ignore any leftover Stripe cancellation state
+    const ending = subscription && subscription.cancel_at_period_end && !subscription.comped;
     const until = subscription && (subscription.trial_end || subscription.current_period_end);
     const untilStr = until
       ? new Date(until).toLocaleDateString('en-GB', { day:'numeric', month:'short' })
