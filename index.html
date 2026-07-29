@@ -181,6 +181,7 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .shop-item .buy{display:block;font-size:11.5px;color:var(--orange-deep);font-weight:600;margin-top:2px;}
 .shop-item .buy.cupboard{color:var(--muted);font-weight:500;}
 .shop-item .buy.stock{color:var(--herb,#8FAE5D);}
+.pantry-hit-note.uses{color:var(--herb,#8FAE5D);font-weight:600;}
 .shop-note{font-size:12.5px;line-height:1.6;color:var(--muted);margin:10px 0 0;}
 
 /* ---------- Progress section ---------- */
@@ -4691,8 +4692,24 @@ function coversIng(pantryKey, ingName){
   return subset(a, b) || subset(b, a);
 }
 
+/* Everything you could cook with right now: what you ticked in My Kitchen plus
+   what is left over from previous shops. Leftovers were being tracked but not
+   used — you could have 200g of chicken in the larder and "what can I make"
+   would ignore it. */
+function availableIngredients(){
+  return pantryItems.concat(Object.keys(larder));
+}
+
 function pantryCovers(ingName){
-  return pantryItems.some(p=>coversIng(p, ingName));
+  return availableIngredients().some(p=>coversIng(p, ingName));
+}
+
+/* Which of your leftovers a recipe would use up — shown on the match so you can
+   see what a recipe clears out of the fridge. */
+function leftoversUsedBy(recipe){
+  const keys = Object.keys(larder);
+  if(!keys.length) return [];
+  return keys.filter(k=>recipe.ing.some(([name])=>coversIng(k, name)));
 }
 
 function togglePantryItem(key){
@@ -4824,8 +4841,9 @@ function renderPantrySelected(){
 function renderPantryResults(){
   const resDiv = document.getElementById('pantryResults');
   if(!resDiv) return;
-  if(!pantryItems.length){
-    resDiv.innerHTML = `<div class="empty" style="margin-top:22px;">Tick or type what you've got — we'll show every recipe you can make right now, plus near-misses worth a small top-up shop.</div>`;
+  // leftovers count as things you have, so check both before giving up
+  if(!availableIngredients().length){
+    resDiv.innerHTML = `<div class="empty" style="margin-top:22px;">Tick or type what you've got — anything left over from your last shop is already counted. We'll show every recipe you can make right now, plus near-misses worth a small top-up shop.</div>`;
     return;
   }
   const useStaples = document.getElementById('pantryStaples').checked;
@@ -4837,14 +4855,23 @@ function renderPantryResults(){
      main ingredient typed in. Three is still a small top-up shop, and results
      are sorted by fewest missing so the best ones stay at the front. */
   }).filter(x=>x.total>0 && x.have>0 && x.missing.length<=3);
-  scored.sort((a,b)=> a.missing.length - b.missing.length || (b.have/b.total) - (a.have/a.total));
+  /* Fewest missing first, then whichever uses up the most of what is already
+     sitting in your fridge — that is the whole point of tracking leftovers. */
+  scored.sort((a,b)=> a.missing.length - b.missing.length
+    || leftoversUsedBy(b.r).length - leftoversUsedBy(a.r).length
+    || (b.have/b.total) - (a.have/a.total));
 
   const ready = scored.filter(x=>!x.missing.length);
   const almost = scored.filter(x=>x.missing.length>0).slice(0,12);
-  const wrap = x => `<div class="pantry-hit">
-    <div class="pantry-hit-note ${x.missing.length?'':'ok'}">${x.missing.length ? 'Missing: ' + x.missing.join(', ') : '✓ You have everything'} · ${x.have}/${x.total} ingredients</div>
+  const wrap = x => {
+    const uses = leftoversUsedBy(x.r);
+    const usesNote = uses.length
+      ? `<div class="pantry-hit-note uses">♻ Uses up your ${uses.slice(0,3).map(escHtml).join(', ')}</div>` : '';
+    return `<div class="pantry-hit">
+    ${usesNote}
+    <div class="pantry-hit-note ${x.missing.length?'':'ok'}">${x.missing.length ? 'Missing: ' + x.missing.map(escHtml).join(', ') : '✓ You have everything'} · ${x.have}/${x.total} ingredients</div>
     ${cardHTML(x.r, null, null, '')}
-  </div>`;
+  </div>`; };
 
   resDiv.innerHTML = `
     <div class="results-head" style="margin-top:30px;"><h2>Ready to cook</h2><span class="results-count">${ready.length} recipe${ready.length!==1?'s':''}</span></div>
