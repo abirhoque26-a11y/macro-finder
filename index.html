@@ -178,6 +178,11 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .recipe-modal-inner{max-width:440px;width:100%;position:relative;margin-bottom:44px;}
 .recipe-modal-close{position:absolute;top:-16px;right:-10px;z-index:2;background:var(--cream);border:2px solid var(--ink);color:var(--ink);width:38px;height:38px;border-radius:999px;font-size:15px;cursor:pointer;line-height:1;}
 
+.shop-item .buy{display:block;font-size:11.5px;color:var(--orange-deep);font-weight:600;margin-top:2px;}
+.shop-item .buy.cupboard{color:var(--muted);font-weight:500;}
+.shop-item .buy.stock{color:var(--herb,#8FAE5D);}
+.shop-note{font-size:12.5px;line-height:1.6;color:var(--muted);margin:10px 0 0;}
+
 /* ---------- Progress section ---------- */
 .progress-sec{padding:88px 0;border-top:1px solid var(--line);}
 .today-card{background:var(--ink);color:var(--cream);border-radius:8px;padding:30px 34px;display:flex;align-items:center;justify-content:space-between;gap:26px;flex-wrap:wrap;margin:0 0 26px;}
@@ -1215,6 +1220,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <h2 class="sec-title">Cook with<br><span class="accent">what you've got.</span></h2>
     <p class="serif-line">tick what's in your kitchen — we'll find the recipes.</p>
 
+    <div id="larderBox" style="margin-top:32px;"></div>
     <div id="kitchenLock" style="display:none;margin-top:36px;"></div>
     <div class="form-panel" id="kitchenPanel" style="margin-top:36px;">
       <div class="form-grid">
@@ -1940,6 +1946,7 @@ function collectProfile(){
     activeSlots: activeSlots.slice(),
     preferredStore,
     pantry: pantryItems.slice(),
+    larder,
     pantryStaples: document.getElementById('pantryStaples').checked,
     pinnedRecipes: pinnedRecipes.slice(),
     quickOnly: state.quickOnly,
@@ -1981,6 +1988,7 @@ function applyProfile(p){
     }
     if(p.preferredStore){ preferredStore = p.preferredStore; localStorage.setItem('mm_store', preferredStore); }
     if(Array.isArray(p.pantry)) pantryItems = p.pantry.slice();
+    if(p.larder && typeof p.larder === 'object') larder = p.larder;
     if(typeof p.pantryStaples === 'boolean') document.getElementById('pantryStaples').checked = p.pantryStaples;
     if(Array.isArray(p.pinnedRecipes)) pinnedRecipes = p.pinnedRecipes.slice();
     if(typeof p.quickOnly === 'boolean'){ state.quickOnly = p.quickOnly; document.getElementById('quickChip').classList.toggle('active', p.quickOnly); }
@@ -2226,6 +2234,13 @@ async function loadRecipesFromDB(){
 /* ---------- State ---------- */
 let state = { goal:"deficit", meal:"breakfast", diet:[], skill:"any", pp:"any", proteinPref:"any", carbPref:"any", favOnly:false, scalePriority:"calories", quickOnly:false, freezerOnly:false };
 let pinnedRecipes = [];   // must-have recipes guaranteed a spot in the week plan
+/* What is left over from previous shops, keyed by canonical ingredient name:
+   { 'chicken breast': { amount: 200, unit: 'g' } }.
+
+   Only fresh items are tracked. Cupboard staples are already billed in
+   proportion to what you use, so counting a half-empty bag of rice as stock
+   would double-count it. */
+let larder = {};
 let lastWeek = null;      // snapshot of the previous week's meals + which days were cooked
 let nextWeekMsg = '';     // "what changed and why" summary after a rollover
 let favourites = [];
@@ -3583,6 +3598,288 @@ function toggleShopTick(key, checked, el){
   el.closest('.shop-item').classList.toggle('ticked', checked);
 }
 
+/* ---------- Pack sizes: what the shop actually costs ----------
+
+   The weekly total used to be the sum of per-serving recipe prices, which
+   quietly assumed you could buy exactly 25g of cashews. You cannot — you buy a
+   200g bag. On a realistic week that understated the shop by around 70%.
+
+   But rounding everything up to whole packs overcorrects just as badly: it
+   billed a whole 1kg tub of protein powder to a week that used one and a half
+   scoops. So each ingredient is one of two kinds:
+
+     f (fresh)     bought for this week and not kept — chicken, salad, milk.
+                   Charged as whole packs, because that is what you pay.
+     c (cupboard)  long-life, drawn down over months — rice, spices, nuts,
+                   protein powder. Charged in proportion to what you use, since
+                   you are running down something already bought.
+
+   Entry format: [pack size, unit, pack price GBP, kind]
+   Prices are mid-market UK own-brand estimates, not live data. */
+const PACKS = {
+  'almond butter':[11,'tbsp',3.50,'c'],
+  'almond milk':[1000,'ml',1.30,'f'],
+  'almonds':[200,'g',2.50,'c'],
+  'apple':[6,'count',1.50,'f'],
+  'arborio rice':[500,'g',1.80,'c'],
+  'asparagus':[200,'g',2.50,'f'],
+  'avocado':[2,'count',1.80,'f'],
+  'bacon':[10,'rashers',2.50,'f'],
+  'bagel':[5,'count',1.30,'f'],
+  'baked beans':[400,'g',0.75,'c'],
+  'banana':[5,'count',1.00,'f'],
+  'basmati rice':[1000,'g',2.20,'c'],
+  'beef jerky':[60,'g',3.00,'c'],
+  'beef mince':[500,'g',4.00,'f'],
+  'beef strips':[300,'g',4.50,'f'],
+  'black beans':[400,'g',0.85,'c'],
+  'blueberries':[150,'g',2.00,'f'],
+  'boiled egg':[12,'count',3.00,'f'],
+  'broccoli':[350,'g',0.90,'f'],
+  'brown rice':[1000,'g',1.90,'c'],
+  'butter':[250,'g',2.20,'c'],
+  'cacao':[16,'tbsp',2.50,'c'],
+  'capers':[12,'tsp',1.30,'c'],
+  'carrot':[6,'count',0.70,'f'],
+  'carrots':[1000,'g',0.70,'f'],
+  'cashews':[200,'g',3.00,'c'],
+  'celery':[8,'sticks',0.90,'f'],
+  'cheddar cheese':[400,'g',3.50,'f'],
+  'cherry tomatoes':[330,'g',1.60,'f'],
+  'chia seeds':[60,'tsp',2.50,'c'],
+  'chicken breast':[650,'g',6.00,'f'],
+  'chicken sausages':[6,'count',3.00,'f'],
+  'chicken thigh':[650,'g',4.50,'f'],
+  'chickpea pasta':[250,'g',2.50,'c'],
+  'chickpeas':[400,'g',0.75,'c'],
+  'chilli':[30,'tsp',1.20,'c'],
+  'chopped tomatoes':[400,'g',0.60,'c'],
+  'cocoa powder':[50,'tsp',2.00,'c'],
+  'coconut milk drink carton':[1000,'ml',1.40,'f'],
+  'cod fillet':[240,'g',4.00,'f'],
+  'cold brew coffee':[750,'ml',2.50,'c'],
+  'coriander':[1,'text',0.70,'f'],
+  'cottage cheese':[300,'g',1.40,'f'],
+  'courgette':[2,'count',1.00,'f'],
+  'couscous':[500,'g',1.30,'c'],
+  'cream':[20,'tbsp',1.20,'f'],
+  'cream cheese alternative':[13,'tbsp',2.00,'f'],
+  'cucumber':[300,'g',0.80,'f'],
+  'curry sauce mix':[1,'packet',1.20,'c'],
+  'dark chocolate chips':[100,'g',1.60,'c'],
+  'dates':[30,'count',2.00,'c'],
+  'edamame beans':[400,'g',2.50,'c'],
+  'egg':[12,'count',3.00,'f'],
+  'egg free noodles':[250,'g',1.30,'c'],
+  'eggs':[12,'count',3.00,'f'],
+  'english muffin':[4,'count',1.20,'f'],
+  'fajita seasoning':[2,'tbsp',0.70,'c'],
+  'falafel mix':[150,'g',1.20,'c'],
+  'fat greek yogurt':[500,'g',2.00,'f'],
+  'feta':[200,'g',2.00,'f'],
+  'firm tofu':[280,'g',2.00,'f'],
+  'flat rice noodles':[250,'g',1.50,'c'],
+  'frozen banana':[5,'count',1.00,'c'],
+  'frozen peas':[900,'g',1.60,'c'],
+  'garlic':[12,'cloves',0.60,'f'],
+  'garlic sauce':[18,'tbsp',1.50,'c'],
+  'granola':[500,'g',2.50,'c'],
+  'greek yogurt':[500,'g',1.80,'f'],
+  'green beans':[220,'g',1.40,'f'],
+  'halloumi':[225,'g',2.50,'f'],
+  'harissa':[18,'tsp',1.60,'c'],
+  'hollandaise sauce':[180,'g',1.80,'f'],
+  'hot sauce':[1,'text',1.20,'c'],
+  'hummus':[200,'g',1.20,'f'],
+  'ice':[1,'text',0.00,'f'],
+  'kale':[200,'g',1.30,'f'],
+  'kidney beans':[400,'g',0.75,'c'],
+  'king prawns':[180,'g',3.50,'f'],
+  'lamb chops':[4,'count',7.00,'f'],
+  'lamb leg':[500,'g',9.00,'f'],
+  'lamb mince':[500,'g',6.00,'f'],
+  'large tortilla wraps':[8,'large',1.40,'f'],
+  'lean beef mince':[500,'g',4.50,'f'],
+  'lemon':[4,'count',1.00,'f'],
+  'lettuce':[1,'count',0.80,'f'],
+  'lettuce and tomato':[1,'handful',1.50,'f'],
+  'light caesar dressing':[16,'tbsp',1.60,'c'],
+  'light coconut milk':[400,'ml',1.00,'f'],
+  'light mayo':[30,'tbsp',1.50,'c'],
+  'lime':[4,'count',1.00,'f'],
+  'linguine':[500,'g',1.10,'c'],
+  'mangetout':[150,'g',1.60,'f'],
+  'mango':[450,'g',2.50,'f'],
+  'maple syrup':[50,'tsp',3.00,'c'],
+  'milk':[2272,'ml',1.65,'f'],
+  'mixed berries':[500,'g',3.00,'f'],
+  'mixed fruit':[500,'g',2.50,'f'],
+  'mixed leaves':[130,'g',1.30,'f'],
+  'mixed mushrooms':[250,'g',1.80,'f'],
+  'mixed nuts':[400,'g',4.00,'c'],
+  'mixed vegetables':[1000,'g',1.60,'f'],
+  'mushroom':[250,'g',1.00,'f'],
+  'mushrooms':[250,'g',1.00,'f'],
+  'mustard':[36,'tsp',1.00,'c'],
+  'new potatoes':[750,'g',1.50,'f'],
+  'noodles':[250,'g',1.20,'c'],
+  'oat milk':[1000,'ml',1.30,'f'],
+  'oats':[1000,'g',1.20,'c'],
+  'olives':[30,'count',1.50,'c'],
+  'onion':[3,'count',1.00,'f'],
+  'pad thai sauce':[13,'tbsp',2.00,'c'],
+  'paneer':[226,'g',2.50,'f'],
+  'panko breadcrumbs':[150,'g',1.50,'c'],
+  'parmesan':[100,'g',2.50,'f'],
+  'pasta':[500,'g',0.90,'c'],
+  'peanut butter':[22,'tbsp',2.00,'c'],
+  'peanuts':[200,'g',1.50,'c'],
+  'peas':[900,'g',1.60,'f'],
+  'pesto':[12,'tbsp',1.80,'c'],
+  'pineapple':[400,'g',2.00,'f'],
+  'plant milk':[1000,'ml',1.30,'f'],
+  'potato':[2000,'g',1.80,'f'],
+  'prawns':[180,'g',3.50,'f'],
+  'quinoa':[500,'g',2.80,'c'],
+  'raisins':[500,'g',1.80,'c'],
+  'raspberries':[150,'g',2.00,'f'],
+  'raw king prawns':[180,'g',3.50,'f'],
+  'red chilli':[5,'count',0.80,'c'],
+  'red lentils':[500,'g',1.30,'c'],
+  'red onion':[3,'count',1.20,'f'],
+  'rice':[1000,'g',1.60,'c'],
+  'rice cakes':[14,'count',0.90,'c'],
+  'roasted sweet potato':[1000,'g',2.00,'f'],
+  'rocket':[60,'g',1.00,'f'],
+  'rolled oats':[1000,'g',1.20,'c'],
+  'romaine lettuce':[1,'count',1.00,'f'],
+  'salmon fillet':[240,'g',4.50,'f'],
+  'salsa':[20,'tbsp',1.20,'c'],
+  'sausage':[6,'count',2.50,'f'],
+  'sesame seeds':[20,'tsp',1.00,'c'],
+  'skyr or high protein yogurt':[450,'g',2.20,'c'],
+  'smoked haddock fillet':[260,'g',4.50,'f'],
+  'smoked salmon':[100,'g',3.00,'f'],
+  'spaghetti':[500,'g',0.90,'c'],
+  'spinach':[240,'g',1.60,'f'],
+  'strawberries':[400,'g',2.50,'f'],
+  'sweet potato':[1000,'g',2.00,'f'],
+  'sweetcorn':[325,'g',0.80,'c'],
+  'tahini':[18,'tbsp',3.00,'c'],
+  'tahini dressing':[16,'tbsp',2.20,'c'],
+  'tenderstem broccoli':[200,'g',2.00,'f'],
+  'teriyaki sauce':[16,'tbsp',1.80,'c'],
+  'thai green curry paste':[12,'tbsp',1.60,'c'],
+  'tofu':[280,'g',2.00,'f'],
+  'tomato':[600,'g',1.20,'f'],
+  'tomato passata':[500,'ml',0.90,'c'],
+  'tomato sauce':[500,'ml',1.20,'c'],
+  'tortilla':[8,'small',1.20,'f'],
+  'tortilla wrap':[8,'large',1.40,'f'],
+  'tuna':[4,'tin',3.50,'c'],
+  'tuna in spring water':[145,'g',1.10,'c'],
+  'tuna steak':[250,'g',5.50,'f'],
+  'turkey breast':[400,'g',5.00,'f'],
+  'turkey mince':[500,'g',4.00,'f'],
+  'turkey slices':[100,'g',1.80,'f'],
+  'vegan protein powder':[30,'scoop',27.00,'c'],
+  'walnuts':[200,'g',3.00,'c'],
+  'watercress':[75,'g',1.00,'f'],
+  'whey protein':[30,'scoop',25.00,'c'],
+  'whole milk':[2272,'ml',1.65,'f'],
+  'wholemeal bread':[16,'slices',1.40,'f'],
+  'wholemeal bun':[4,'count',1.20,'f'],
+  'wholemeal pitta':[6,'count',1.00,'f']
+};
+const PACK_CONV = {"cherry tomatoes":{"count":10},"tomato":{"count":100},"sweet potato":{"count":200},"potato":{"count":250},"cucumber":{"count":300},"carrots":{"count":80},"chickpeas":{"tin":400},"mango":{"count":200},"lime":{"wedge":0.25}};
+
+/* Units differ between recipes and packs — "2 tbsp" of a yogurt sold in grams,
+   "6 cherry tomatoes" of something sold by weight. Plurals and spoon measures
+   convert generically; count-to-weight needs PACK_CONV above. */
+const SPOON_ML = { tbsp: 15, tsp: 5 };
+const UNIT_ALIAS = { cloves:'clove', scoops:'scoop', slices:'slice', rashers:'rasher',
+                     sticks:'stick', large:'count', small:'count', '':'count' };
+function toPackUnit(amount, fromUnit, packUnit, key){
+  const a = UNIT_ALIAS[fromUnit] || fromUnit, b = UNIT_ALIAS[packUnit] || packUnit;
+  if(a === b) return amount;
+  if(SPOON_ML[a] && (b === 'g' || b === 'ml')) return amount * SPOON_ML[a];
+  if((a === 'g' || a === 'ml') && SPOON_ML[b]) return amount / SPOON_ML[b];
+  if(SPOON_ML[a] && SPOON_ML[b]) return amount * SPOON_ML[a] / SPOON_ML[b];
+  const c = PACK_CONV[key];
+  if(c && c[a] != null) return amount * c[a];
+  if(c && c[b]) return amount / c[b];
+  return null;   // no sensible conversion — caller leaves it unpriced
+}
+
+/* What this ingredient adds to the shop, given the total needed for the week. */
+function packCost(key, amountInPackUnit){
+  const p = PACKS[key];
+  if(!p || !(amountInPackUnit > 0)) return null;
+  const [size, unit, price, kind] = p;
+  if(kind === 'c'){
+    return { cost: (amountInPackUnit / size) * price, packs: 0, size, unit, price, kind,
+             need: amountInPackUnit, leftover: 0 };
+  }
+  const packs = Math.ceil(amountInPackUnit / size);
+  return { cost: packs * price, packs, size, unit, price, kind,
+           need: amountInPackUnit, leftover: packs * size - amountInPackUnit };
+}
+
+
+/* ---------- Larder: what is left after a shop ----------
+   Pressing "I've done this shop" assumes you bought the packs listed and will
+   cook the week. What is left is stock, and it comes off next week's list. */
+function commitShop(){
+  const items = (lastShopList && lastShopList.pendingShop) || [];
+  if(!items.length){ showToast('Build a week first.'); return; }
+  let changed = 0;
+  items.forEach(it=>{
+    const had = (larder[it.key] && larder[it.key].unit === it.unit) ? larder[it.key].amount : 0;
+    const left = Math.max(0, had + it.bought - it.need);
+    if(left > 0.01){ larder[it.key] = { amount: Math.round(left * 10) / 10, unit: it.unit }; changed++; }
+    else delete larder[it.key];
+  });
+  saveProfileSoon();
+  renderLarder();
+  showToast(`✓ Shop recorded — ${changed} item${changed !== 1 ? 's' : ''} left over for next week`);
+  if(weekState.activeSlots && weekState.activeSlots.length) renderWeekUI();
+}
+
+function clearLarder(){
+  larder = {};
+  saveProfileSoon();
+  renderLarder();
+  if(weekState.activeSlots && weekState.activeSlots.length) renderWeekUI();
+  showToast('Kitchen stock cleared');
+}
+
+function removeLarderItem(key){
+  delete larder[key];
+  saveProfileSoon();
+  renderLarder();
+  if(weekState.activeSlots && weekState.activeSlots.length) renderWeekUI();
+}
+
+function renderLarder(){
+  const box = document.getElementById('larderBox');
+  if(!box) return;
+  const keys = Object.keys(larder).sort();
+  if(!keys.length){
+    box.innerHTML = `<p class="hint" style="margin:0;">Nothing recorded yet. Build a week, then press <strong>I've done this shop</strong> on the shopping list and whatever is left over is tracked here — it comes off next week's list automatically.</p>`;
+    return;
+  }
+  const worth = keys.reduce((sum, k)=>{
+    const p = PACKS[k];
+    return sum + (p ? (larder[k].amount / p[0]) * p[2] : 0);
+  }, 0);
+  box.innerHTML = `
+    <div class="pweek-head" style="margin-bottom:12px;">
+      <h3>Still in your kitchen</h3>
+      <span class="hint">${keys.length} item${keys.length!==1?'s':''} · about £${worth.toFixed(2)} · <a href="#" onclick="clearLarder();return false;" style="color:var(--orange-deep);">clear</a></span>
+    </div>
+    <div class="chips">${keys.map(k=>`<div class="chip active" onclick="removeLarderItem('${escJsAttr(k)}')" title="Remove">${escHtml(k)} ${parseFloat(larder[k].amount.toFixed(1))}${larder[k].unit === 'count' ? '' : escHtml(larder[k].unit)} ✕</div>`).join('')}</div>`;
+}
+
 function buildShoppingListHTML(planMatrix, slots, weeklyCost){
   const map = {};
   planMatrix.forEach((dayPlan)=>{
@@ -3590,21 +3887,33 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
       const r = dayPlan[slot];
       if(!r) return;
       r.ing.forEach(([name, qty])=>{
-        const key = name.toLowerCase();
-        if(!map[key]) map[key] = { display:name, entries:[], category:categorize(name) };
+        /* Key on the canonical name so "egg" and "eggs" are one line. Keying on
+           the raw text split them into two rows and bought two sets of packs. */
+        const key = canonIng(name) || name.toLowerCase();
+        if(!map[key]) map[key] = { display:name, entries:[], category:categorize(name), spellings:{} };
         map[key].entries.push({ qty });
+        const disp = name.toLowerCase();
+        map[key].spellings[disp] = (map[key].spellings[disp] || 0) + 1;
       });
     });
   });
 
   const cats = {};
   Object.values(map).forEach(item=>{
+    if(item.spellings){
+      item.display = Object.entries(item.spellings)
+        .sort((a,b)=>b[1]-a[1] || a[0].length-b[0].length)[0][0];
+    }
     if(!cats[item.category]) cats[item.category]=[];
     cats[item.category].push(item);
   });
 
   const catOrder = ['Protein','Carbs & bakery','Fruit & veg','Dairy & alternatives','Pantry & extras'];
-  lastShopList = { sections: [], weeklyCost };
+  const stapleBox = document.getElementById('pantryStaples');
+  const useStaples = stapleBox ? stapleBox.checked : true;
+  let shopTotal = 0;      // what the actual shop costs, not the sum of servings
+  const pendingShop = [];  // per-item buy/need, so the larder can be updated after shopping
+  lastShopList = { sections: [], weeklyCost, shopTotal: 0 };
   // how many distinct things you actually have to buy — used by the coach summary
   lastShopItemCount = Object.keys(map).length;
   let sections = '';
@@ -3624,6 +3933,49 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
         totalParts.push(count > 1 ? `${qty} ×${count}` : qty);
       });
       const totalStr = totalParts.join(' + ');
+
+      /* Price what you actually have to buy. Staples are skipped when the user
+         says they already have the basics, exactly as the recipe costing does. */
+      const packKey = canonIng(item.display) in PACKS ? canonIng(item.display)
+                    : (normIng(item.display) in PACKS ? normIng(item.display) : null);
+      let packInfo = null, alreadyHave = 0, neededTotal = 0;
+      if(packKey && !(useStaples && isStaple(item.display))){
+        const pu = PACKS[packKey][1];
+        let inPackUnits = 0, converted = false;
+        Object.entries(byUnit).forEach(([unit, amt])=>{
+          const c = toPackUnit(amt, unit, pu, packKey);
+          if(c != null){ inPackUnits += c; converted = true; }
+        });
+        if(converted){
+          neededTotal = inPackUnits;
+          // leftovers from previous shops come off before we work out packs
+          const stock = larder[packKey];
+          if(stock && stock.unit === pu) alreadyHave = Math.min(stock.amount, inPackUnits);
+          packInfo = packCost(packKey, inPackUnits - alreadyHave);
+          if(packInfo){ packInfo.need = neededTotal; packInfo.fromStock = alreadyHave; }
+        }
+      }
+      if(packInfo) shopTotal += packInfo.cost;
+      if(packKey && packInfo && packInfo.kind === 'f'){
+        pendingShop.push({ key: packKey, unit: PACKS[packKey][1],
+                           bought: packInfo.packs * packInfo.size,
+                           need: neededTotal, had: alreadyHave });
+      }
+
+      const isStapleItem = useStaples && isStaple(item.display);
+      const stockBit = alreadyHave > 0.01
+        ? `<span class="buy stock">${parseFloat(alreadyHave.toFixed(1))}${PACKS[packKey][1] === 'count' ? '' : PACKS[packKey][1]} already in your kitchen</span>` : '';
+      const coveredByStock = packKey && alreadyHave >= neededTotal - 0.01 && neededTotal > 0;
+      const buyNote = isStapleItem
+        ? `<span class="buy cupboard">assumed already in your cupboard</span>`
+        : coveredByStock
+        ? stockBit + `<span class="buy stock">nothing to buy</span>`
+        : stockBit + (packInfo
+        ? (packInfo.kind === 'f'
+            ? `<span class="buy">buy ${packInfo.packs} × ${packInfo.size}${packInfo.unit === 'count' ? '' : packInfo.unit} · £${packInfo.cost.toFixed(2)}${packInfo.leftover > 0.01 ? ` · ${parseFloat(packInfo.leftover.toFixed(1))}${packInfo.unit === 'count' ? '' : packInfo.unit} spare` : ''}</span>`
+            : `<span class="buy cupboard">from the cupboard · £${packInfo.cost.toFixed(2)} used</span>`)
+        : '');
+
       printItems.push({ name: item.display, qty: totalStr });
       const s = storeLinks(item.display);
       const key = item.display.toLowerCase();
@@ -3635,6 +3987,7 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
         <input type="checkbox" ${ticked?'checked':''} onchange="toggleShopTick('${esc(key)}', this.checked, this)">
         <span class="shop-item-body">
           <strong style="color:var(--ink);">${item.display}</strong><span class="qty">${totalStr}</span>
+          ${buyNote}
           <span class="links" style="display:block;">${links}</span>
         </span>
       </label>`;
@@ -3642,6 +3995,16 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
     lastShopList.sections.push({ cat, items: printItems });
     sections += `<div class="shop-cat"><h4>${cat}</h4>${items}</div>`;
   });
+
+  lastShopList.shopTotal = shopTotal;
+  lastShopList.pendingShop = pendingShop;
+
+  /* Two different, both-true numbers. The shop figure is what you hand over at
+     the till; the ingredients figure is what the food you actually eat is
+     worth. They differ because packs come in fixed sizes. */
+  const shopNote = `<p class="shop-note">£${shopTotal.toFixed(2)} is what this shop costs &mdash; whole packs, not exact amounts.
+    The food you'll actually eat is worth about £${weeklyCost.toFixed(2)}; the difference is what's left in the cupboard
+    for next week. Long-life items are charged only for the portion used. Prices are estimates, not live supermarket data.</p>`;
 
   const storeOptions = [`<option value="all" ${preferredStore==='all'?'selected':''}>All stores</option>`]
     .concat(STORES.map(st=>`<option value="${st.id}" ${preferredStore===st.id?'selected':''}>${st.label}</option>`)).join('');
@@ -3678,7 +4041,7 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
   <div class="shop-list" style="margin-top:0;">
     <div class="results-head" style="margin-top:0;">
       <h2>Shopping list</h2>
-      <span class="results-count">£${weeklyCost.toFixed(2)} total</span>
+      <span class="results-count">£${shopTotal.toFixed(2)} shop</span>
     </div>
     <div class="store-compare">${compareTiles}</div>
     ${tieNote}
@@ -3688,7 +4051,7 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
       <button class="pager-btn" onclick="printShoppingList()" type="button">🖨 Print list</button>
     </div>
     <p class="hint" style="margin-bottom:16px;">Tick items off as you shop — or tick anything you already have at home. Pick your usual supermarket above to see one search link per item instead of five. Quantities are combined across the week where units match; mixed units are listed side by side rather than guessed at.</p>
-    ${sections}
+    ${sections}${shopNote}<div class="actions" style="margin-top:14px;"><button class="btn small" type="button" onclick="commitShop()">✓ I've done this shop</button></div>
   </div>`;
 }
 
@@ -3710,7 +4073,7 @@ function printShoppingList(){
     </style></head><body>
     <h1>Shopping list — Macro Mastery</h1>
     ${secs}
-    <p class="total">Estimated total: £${lastShopList.weeklyCost.toFixed(2)}</p>
+    <p class="total">Estimated shop: £${(lastShopList.shopTotal||lastShopList.weeklyCost).toFixed(2)}</p>
     <p style="font-size:11px;color:#777;">Prices are rough per-serving estimates and vary by store and season.</p>
     </body></html>`);
   win.document.close();
@@ -4506,6 +4869,7 @@ function renderKitchenGate(){
 }
 
 function refreshPantryUI(){
+  renderLarder();
   if(!renderKitchenGate()) return;
   buildPantryChips();
   renderPantrySelected();
