@@ -4228,15 +4228,30 @@ function canonIng(s){
 }
 function isStaple(name){ const n = normIng(name); return PANTRY_STAPLES.some(st=>n.includes(st)); }
 
+/* Word-set containment, not substring or shared-word matching.
+
+   Substring matching made "rice" cover "ice", and "apple" cover "pineapple".
+   Sharing any word over three letters was worse: "beef mince" covered "beef
+   jerky", "soy sauce" covered "tomato sauce", and every milk covered every
+   other milk. Across the current library those two rules produced 250 false
+   matches, all of which told you that you could cook something you could not.
+
+   The rule now: one ingredient covers the other only when its words are a
+   subset of the other's. "rice" covers "basmati rice" because {rice} sits
+   inside {basmati, rice}; it does not cover "ice", because {rice} and {ice}
+   share nothing. Generic-covers-specific still works in both directions, which
+   is the behaviour that makes a pantry search useful. */
+function ingWords(s){ return new Set(canonIng(s).split(' ').filter(Boolean)); }
+
+function coversIng(pantryKey, ingName){
+  const a = ingWords(ingName), b = ingWords(pantryKey);
+  if(!a.size || !b.size) return false;
+  const subset = (x, y)=>[...x].every(w=>y.has(w));
+  return subset(a, b) || subset(b, a);
+}
+
 function pantryCovers(ingName){
-  const n = normIng(ingName), c = canonIng(ingName);
-  const nWords = new Set(n.split(' ').concat(c.split(' ')));
-  return pantryItems.some(p=>{
-    const pc = canonIng(p);
-    if(n.includes(p) || p.includes(n)) return true;
-    if(c.includes(pc) || pc.includes(c)) return true;
-    return pc.split(' ').some(w=>w.length>3 && nWords.has(w));
-  });
+  return pantryItems.some(p=>coversIng(p, ingName));
 }
 
 function togglePantryItem(key){
@@ -4253,12 +4268,7 @@ function clearPantry(){
 /* Does this typed word appear in any recipe's ingredient list? Mirrors the same
    fuzzy rules as pantryCovers so what you can add matches what can be found. */
 function ingredientKnown(key){
-  return RECIPES.some(r=>r.ing.some(([name])=>{
-    const n = normIng(name);
-    if(n.includes(key) || key.includes(n)) return true;
-    const nWords = n.split(' ');
-    return key.split(' ').some(w=>w.length>3 && nWords.includes(w));
-  }));
+  return RECIPES.some(r=>r.ing.some(([name])=>coversIng(key, name)));
 }
 /* Nearest ingredient names, for a "did you mean" hint. Ranked by how much of
    the typed word actually matches the start of a word in the ingredient, so a
