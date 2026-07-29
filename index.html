@@ -820,7 +820,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
           <span class="pp-note">Works out at £3.33 a month</span>
         </button>
       </div>
-      <p class="pro-trial">Both start with a <strong>3-day free trial</strong>. You will not be charged until it ends, and you can cancel in one click before then.</p>
+      <p class="pro-trial" id="proTrialLine">Both start with a <strong>3-day free trial</strong>. You will not be charged until it ends, and you can cancel in one click before then.</p>
       <p class="pro-small" id="proMsg"></p>
       <p class="pro-small">Finding individual recipes and browsing all <span id="proRecipeCount">85</span> recipes stays free, always. Macro Mastery is intended for UK customers &mdash; prices and supermarket links are UK-specific. By subscribing you agree to our <a href="/terms.html">Terms</a> and <a href="/refund.html">Refund Policy</a>.</p>
     </div>
@@ -1365,6 +1365,17 @@ function openProModal(why){
   }
   document.getElementById('proWhy').textContent = why ? `— ${why} is part of Pro` : '— Macro Mastery Pro';
   document.getElementById('proMsg').textContent = '';
+
+  /* The free trial is once per account. Promising one to somebody who has
+     already used theirs would be a straightforward lie at the point of payment,
+     and the charge landing immediately is exactly how chargebacks start. */
+  const usedTrial = !!(subscription && subscription.trial_end);
+  const line = document.getElementById('proTrialLine');
+  if(line){
+    line.innerHTML = usedTrial
+      ? 'You have already used your free trial, so this subscription <strong>starts straight away</strong> and your card is charged today. Cancel any time.'
+      : 'Both start with a <strong>3-day free trial</strong>. You will not be charged until it ends, and you can cancel in one click before then.';
+  }
   const n = document.getElementById('proRecipeCount');
   if(n && RECIPES.length) n.textContent = RECIPES.length;
   document.getElementById('proModal').classList.add('open');
