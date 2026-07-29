@@ -212,6 +212,18 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .pday.future{opacity:.4;cursor:not-allowed;background:transparent;border-style:dashed;}
 .pday.future input{cursor:not-allowed;}
 
+.ach-wrap{margin:0 0 26px;}
+.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr));gap:12px;}
+.ach{background:var(--card);border:1.5px solid var(--line-strong);border-radius:8px;padding:16px 14px;text-align:center;position:relative;}
+/* locked badges stay visible but drained of colour — you can see what is coming */
+.ach:not(.got){opacity:.55;}
+.ach:not(.got) .ach-i{filter:grayscale(1);}
+.ach.got{border-color:var(--ink);background:linear-gradient(160deg,#FFFDF6 0%,#F7EFD8 100%);box-shadow:0 1px 0 rgba(20,20,18,.06);}
+.ach-i{display:block;font-size:26px;line-height:1;margin-bottom:8px;}
+.ach-n{display:block;font-family:'Oswald',sans-serif;font-weight:600;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;}
+.ach-d{display:block;font-size:11px;color:var(--muted);line-height:1.4;}
+.ach-bar{display:block;height:3px;background:var(--line);border-radius:999px;margin-top:9px;overflow:hidden;}
+.ach-bar i{display:block;height:100%;background:var(--orange);border-radius:999px;}
 .pgrid-wrap h3{font-family:'Anton',sans-serif;font-weight:400;font-size:21px;text-transform:uppercase;margin:0 0 14px;}
 .pgrid{background:var(--card);border:1.5px solid var(--ink);border-radius:8px;padding:20px 22px;overflow-x:auto;}
 .grow{display:flex;align-items:center;gap:14px;padding:3px 0;}
@@ -821,7 +833,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       <div class="stat s-gold"><span class="stat-n" id="recipeCountStat">82+</span><span class="stat-l">Recipes &amp; growing</span></div>
       <div class="stat s-ink"><span class="stat-n">5</span><span class="stat-l">UK supermarkets linked</span></div>
       <div class="stat s-orange"><span class="stat-n">60s</span><span class="stat-l">Built around your kcal &amp; protein targets</span></div>
-      <div class="stat s-paper"><span class="stat-n">£0</span><span class="stat-l">Free to use</span></div>
+      <div class="stat s-paper"><span class="stat-n">3</span><span class="stat-l">Day free trial, cancel anytime</span></div>
     </div>
   </div>
 </section>
@@ -1203,7 +1215,8 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <h2 class="sec-title">Cook with<br><span class="accent">what you've got.</span></h2>
     <p class="serif-line">tick what's in your kitchen — we'll find the recipes.</p>
 
-    <div class="form-panel" style="margin-top:36px;">
+    <div id="kitchenLock" style="display:none;margin-top:36px;"></div>
+    <div class="form-panel" id="kitchenPanel" style="margin-top:36px;">
       <div class="form-grid">
         <div class="field form-full">
           <label>Add an ingredient</label>
@@ -1465,6 +1478,7 @@ function updateProUI(){
   renderChecklistCard();
   renderHistoryCard();
   renderProgressSection();
+  renderKitchenGate();
   renderSavedPlansList();
 }
 document.getElementById('billingBtn').addEventListener('click', openBillingPortal);
@@ -3708,6 +3722,63 @@ function renderTodayCard(){
     </div>`;
 }
 
+/* ---------- Badges ----------
+   Every badge is derived from cookedHistory at render time — nothing extra is
+   stored, so they can never drift out of step with the ledger, and changing a
+   threshold re-evaluates everyone retroactively.
+
+   Streak badges use the LONGEST streak, not the current one. A badge you lose
+   because you missed a Tuesday is a punishment, and punishing people for one
+   bad week is how you get them to stop logging altogether. */
+function allBadges(){
+  const s = historyStats();
+  const distinct = new Set();
+  cookedHistory.forEach(h=>Object.values(h.meals || {}).forEach(n=>distinct.add(n)));
+
+  const defs = [
+    { icon:'🍳', name:'First cook',      desc:'Log your first day',            value:s.totalDays,   target:1 },
+    { icon:'🔥', name:'On a roll',       desc:'3 days in a row',               value:s.longest,     target:3 },
+    { icon:'📅', name:'Full week',       desc:'7 days in a row',               value:s.longest,     target:7 },
+    { icon:'🏅', name:'Ten down',        desc:'10 days logged',                value:s.totalDays,   target:10 },
+    { icon:'🍽️', name:'25 meals',        desc:'25 home-made meals',            value:s.totalMeals,  target:25 },
+    { icon:'🌍', name:'Ten recipes',     desc:'10 different recipes cooked',   value:distinct.size, target:10 },
+    { icon:'⚡', name:'Fortnight',       desc:'14 days in a row',              value:s.longest,     target:14 },
+    { icon:'💪', name:'Fifty days',      desc:'50 days logged',                value:s.totalDays,   target:50 },
+    { icon:'🧑‍🍳', name:'Adventurous',   desc:'25 different recipes cooked',   value:distinct.size, target:25 },
+    { icon:'💯', name:'100 meals',       desc:'100 home-made meals',           value:s.totalMeals,  target:100 },
+    { icon:'🗓️', name:'Unbroken month',  desc:'30 days in a row',              value:s.longest,     target:30 },
+    { icon:'👑', name:'Century',         desc:'100 days logged',               value:s.totalDays,   target:100 }
+  ];
+  return defs.map(b=>({ ...b, earned: b.value >= b.target }));
+}
+
+function renderBadgesHTML(){
+  const list = allBadges();
+  const earned = list.filter(b=>b.earned);
+  // the nearest unearned badge is the motivating one, so surface it by name
+  const next = list.filter(b=>!b.earned)
+                   .sort((a,b)=>(a.target - a.value) - (b.target - b.value))[0];
+
+  const tiles = list.map(b=>{
+    const pct = Math.min(100, Math.round((b.value / b.target) * 100));
+    return `<div class="ach ${b.earned?'got':''}" title="${escAttr(b.desc)}">
+      <span class="ach-i">${b.icon}</span>
+      <span class="ach-n">${b.name}</span>
+      <span class="ach-d">${b.earned ? b.desc : `${Math.min(b.value, b.target)} / ${b.target}`}</span>
+      ${b.earned ? '' : `<span class="ach-bar"><i style="width:${pct}%"></i></span>`}
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="ach-wrap">
+      <div class="pweek-head">
+        <h3>Badges</h3>
+        <span class="hint">${earned.length} of ${list.length}${next ? ` · next: ${next.name} (${next.target - next.value} to go)` : ' · all unlocked'}</span>
+      </div>
+      <div class="achs">${tiles}</div>
+    </div>`;
+}
+
 function renderProgressSection(){
   const body = document.getElementById('progressBody');
   if(!body) return;
@@ -3784,6 +3855,8 @@ function renderProgressSection(){
       <div class="pdays">${weekRow}</div>
       <p class="hint" style="margin:14px 0 0;">Days that haven't happened yet can't be ticked. Everything you log is kept permanently, so resetting the week doesn't lose it.</p>
     </div>
+
+    ${renderBadgesHTML()}
 
     <div class="pgrid-wrap">
       <h3>Last 12 weeks</h3>
@@ -4298,7 +4371,21 @@ function renderPantryResults(){
   `;
 }
 
+function renderKitchenGate(){
+  const lock = document.getElementById('kitchenLock');
+  const panel = document.getElementById('kitchenPanel');
+  if(!lock || !panel) return false;
+  if(isPro()){ lock.style.display = 'none'; panel.style.display = ''; return true; }
+  panel.style.display = 'none';
+  lock.style.display = '';
+  lock.innerHTML = `<div class="pro-lock"><h4>My Kitchen is part of Pro</h4>
+    <p>Tick off what is already in your cupboards and we will show you every recipe you can make tonight without shopping.</p>
+    <button class="btn small" type="button" onclick="openProModal('My Kitchen')">Start 3-day free trial</button></div>`;
+  return false;
+}
+
 function refreshPantryUI(){
+  if(!renderKitchenGate()) return;
   buildPantryChips();
   renderPantrySelected();
   renderPantryResults();
