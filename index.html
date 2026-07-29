@@ -182,6 +182,13 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .shop-item .buy.cupboard{color:var(--muted);font-weight:500;}
 .shop-item .buy.stock{color:var(--herb,#8FAE5D);}
 .pantry-hit-note.uses{color:var(--herb,#8FAE5D);font-weight:600;}
+.pack-edit-link{font-size:11px;color:var(--muted);text-decoration:underline;margin-left:6px;}
+.pack-edit-link:hover{color:var(--orange-deep);}
+.pack-edit{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11.5px;}
+.pack-edit label{display:flex;flex-direction:column;gap:3px;font-family:'Oswald',sans-serif;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.pack-edit input{width:92px;padding:6px 8px;border:1.5px solid var(--line-strong);border-radius:4px;font-size:13px;}
+.pack-edit em{font-style:normal;font-size:10px;color:var(--muted);}
+.pack-edit a{font-size:11px;color:var(--muted);}
 .shop-note{font-size:12.5px;line-height:1.6;color:var(--muted);margin:10px 0 0;}
 
 /* ---------- Progress section ---------- */
@@ -1948,6 +1955,7 @@ function collectProfile(){
     preferredStore,
     pantry: pantryItems.slice(),
     larder,
+    packOverrides,
     pantryStaples: document.getElementById('pantryStaples').checked,
     pinnedRecipes: pinnedRecipes.slice(),
     quickOnly: state.quickOnly,
@@ -1990,6 +1998,7 @@ function applyProfile(p){
     if(p.preferredStore){ preferredStore = p.preferredStore; localStorage.setItem('mm_store', preferredStore); }
     if(Array.isArray(p.pantry)) pantryItems = p.pantry.slice();
     if(p.larder && typeof p.larder === 'object') larder = p.larder;
+    if(p.packOverrides && typeof p.packOverrides === 'object') packOverrides = p.packOverrides;
     if(typeof p.pantryStaples === 'boolean') document.getElementById('pantryStaples').checked = p.pantryStaples;
     if(Array.isArray(p.pinnedRecipes)) pinnedRecipes = p.pinnedRecipes.slice();
     if(typeof p.quickOnly === 'boolean'){ state.quickOnly = p.quickOnly; document.getElementById('quickChip').classList.toggle('active', p.quickOnly); }
@@ -2242,6 +2251,13 @@ let pinnedRecipes = [];   // must-have recipes guaranteed a spot in the week pla
    proportion to what you use, so counting a half-empty bag of rice as stock
    would double-count it. */
 let larder = {};
+/* Your own pack sizes and prices, overriding our estimates:
+   { 'chicken breast': { size: 1000, price: 7.20 } }
+
+   Ours are typical UK own-brand guesses. Yours are what you actually put in the
+   trolley, so once you correct one it is used for every future shop and the
+   leftover maths becomes real rather than approximate. */
+let packOverrides = {};
 let lastWeek = null;      // snapshot of the previous week's meals + which days were cooked
 let nextWeekMsg = '';     // "what changed and why" summary after a rollover
 let favourites = [];
@@ -3813,16 +3829,26 @@ function toPackUnit(amount, fromUnit, packUnit, key){
 }
 
 /* What this ingredient adds to the shop, given the total needed for the week. */
+/* The pack we should price against: the user's own if they have corrected it,
+   otherwise our estimate. */
+function effectivePack(key){
+  const base = PACKS[key];
+  if(!base) return null;
+  const o = packOverrides[key];
+  return o ? [o.size || base[0], base[1], (o.price != null ? o.price : base[2]), base[3], true]
+           : [base[0], base[1], base[2], base[3], false];
+}
+
 function packCost(key, amountInPackUnit){
-  const p = PACKS[key];
+  const p = effectivePack(key);
   if(!p || !(amountInPackUnit > 0)) return null;
-  const [size, unit, price, kind] = p;
+  const [size, unit, price, kind, custom] = p;
   if(kind === 'c'){
-    return { cost: (amountInPackUnit / size) * price, packs: 0, size, unit, price, kind,
+    return { cost: (amountInPackUnit / size) * price, packs: 0, size, unit, price, kind, custom,
              need: amountInPackUnit, leftover: 0 };
   }
   const packs = Math.ceil(amountInPackUnit / size);
-  return { cost: packs * price, packs, size, unit, price, kind,
+  return { cost: packs * price, packs, size, unit, price, kind, custom,
            need: amountInPackUnit, leftover: packs * size - amountInPackUnit };
 }
 
@@ -3879,6 +3905,43 @@ function renderLarder(){
       <span class="hint">${keys.length} item${keys.length!==1?'s':''} · about £${worth.toFixed(2)} · <a href="#" onclick="clearLarder();return false;" style="color:var(--orange-deep);">clear</a></span>
     </div>
     <div class="chips">${keys.map(k=>`<div class="chip active" onclick="removeLarderItem('${escJsAttr(k)}')" title="Remove">${escHtml(k)} ${parseFloat(larder[k].amount.toFixed(1))}${larder[k].unit === 'count' ? '' : escHtml(larder[k].unit)} ✕</div>`).join('')}</div>`;
+}
+
+
+/* ---------- Correcting a pack size ----------
+   Our pack sizes are estimates. The moment someone tells us what they actually
+   bought, that becomes the truth for them from then on — which is what makes
+   the leftover tracking accurate rather than approximate. */
+function openPackEdit(key, rowId){
+  const row = document.getElementById(rowId);
+  if(!row) return;
+  const p = effectivePack(key);
+  if(!p) return;
+  const [size, unit, price] = p;
+  row.innerHTML = `<span class="pack-edit">
+      <label>Pack size<input type="number" step="any" min="0" id="${rowId}-size" value="${size}"><em>${unit === 'count' ? 'items' : escHtml(unit)}</em></label>
+      <label>Price £<input type="number" step="0.01" min="0" id="${rowId}-price" value="${price.toFixed(2)}"></label>
+      <button type="button" class="btn small" onclick="savePackEdit('${escJsAttr(key)}','${escJsAttr(rowId)}')">Save</button>
+      <a href="#" onclick="renderWeekUI();return false;">cancel</a>
+      ${packOverrides[key] ? `<a href="#" onclick="resetPackEdit('${escJsAttr(key)}');return false;">reset to default</a>` : ''}
+    </span>`;
+}
+
+function savePackEdit(key, rowId){
+  const size = parseFloat((document.getElementById(rowId + '-size') || {}).value);
+  const price = parseFloat((document.getElementById(rowId + '-price') || {}).value);
+  if(!(size > 0) || !(price >= 0)){ showToast('Enter a pack size and price.'); return; }
+  packOverrides[key] = { size, price };
+  saveProfileSoon();
+  showToast(`Saved — ${key} priced at £${price.toFixed(2)} per ${size}${PACKS[key][1] === 'count' ? '' : PACKS[key][1]}`);
+  renderWeekUI();
+}
+
+function resetPackEdit(key){
+  delete packOverrides[key];
+  saveProfileSoon();
+  showToast('Back to our estimate');
+  renderWeekUI();
 }
 
 function buildShoppingListHTML(planMatrix, slots, weeklyCost){
@@ -3967,6 +4030,9 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
       const stockBit = alreadyHave > 0.01
         ? `<span class="buy stock">${parseFloat(alreadyHave.toFixed(1))}${PACKS[packKey][1] === 'count' ? '' : PACKS[packKey][1]} already in your kitchen</span>` : '';
       const coveredByStock = packKey && alreadyHave >= neededTotal - 0.01 && neededTotal > 0;
+      const rowId = 'pk-' + Math.abs([...(packKey||'')].reduce((h,c)=>h*31+c.charCodeAt(0)|0,7));
+      const editLink = packKey && !isStapleItem
+        ? ` <a href="#" class="pack-edit-link" onclick="openPackEdit('${escJsAttr(packKey)}','${escJsAttr(rowId)}');return false;">${packOverrides[packKey] ? 'your pack' : 'wrong size?'}</a>` : '';
       const buyNote = isStapleItem
         ? `<span class="buy cupboard">assumed already in your cupboard</span>`
         : coveredByStock
@@ -3988,7 +4054,7 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
         <input type="checkbox" ${ticked?'checked':''} onchange="toggleShopTick('${esc(key)}', this.checked, this)">
         <span class="shop-item-body">
           <strong style="color:var(--ink);">${item.display}</strong><span class="qty">${totalStr}</span>
-          ${buyNote}
+          <span id="${rowId}">${buyNote}${editLink}</span>
           <span class="links" style="display:block;">${links}</span>
         </span>
       </label>`;
