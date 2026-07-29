@@ -178,6 +178,57 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .recipe-modal-inner{max-width:440px;width:100%;position:relative;margin-bottom:44px;}
 .recipe-modal-close{position:absolute;top:-16px;right:-10px;z-index:2;background:var(--cream);border:2px solid var(--ink);color:var(--ink);width:38px;height:38px;border-radius:999px;font-size:15px;cursor:pointer;line-height:1;}
 
+/* ---------- Progress section ---------- */
+.progress-sec{padding:88px 0;border-top:1px solid var(--line);}
+.today-card{background:var(--ink);color:var(--cream);border-radius:8px;padding:30px 34px;display:flex;align-items:center;justify-content:space-between;gap:26px;flex-wrap:wrap;margin:0 0 26px;}
+.today-card.done{background:var(--card);color:var(--ink);border:1.5px solid var(--herb,#8FAE5D);}
+.today-label{font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;opacity:.72;margin:0 0 8px;}
+.today-q{font-family:'Anton',sans-serif;font-weight:400;font-size:29px;line-height:1.05;text-transform:uppercase;margin:0 0 12px;}
+.today-meals{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:7px;}
+.today-meals li{font-size:12.5px;padding:5px 12px;border-radius:999px;background:rgba(244,239,225,.14);}
+.today-card.done .today-meals li{background:var(--cream);}
+.today-card .btn{white-space:nowrap;}
+.today-card .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+.pstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:0;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--card);margin:0 0 26px;}
+.pstat{padding:20px 18px;border-right:1px solid var(--line);}
+.pstat:last-child{border-right:none;}
+.pstat b{display:block;font-family:'Anton',sans-serif;font-size:34px;line-height:1;margin-bottom:5px;}
+.pstat b.herb{color:var(--herb,#8FAE5D);} .pstat b.orange{color:var(--orange);}
+.pstat span{font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+
+.pweek{background:var(--card);border:1.5px solid var(--ink);border-radius:8px;padding:24px 26px;margin:0 0 26px;}
+.pweek-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 16px;}
+.pweek-head h3{font-family:'Anton',sans-serif;font-weight:400;font-size:21px;text-transform:uppercase;margin:0;}
+.pdays{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+.pday{display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 4px;border:1.5px solid var(--line-strong);border-radius:6px;cursor:pointer;background:var(--cream);}
+.pday input{margin:0;}
+.pday-d{font-family:'Oswald',sans-serif;font-weight:600;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.pday-n{font-family:'Anton',sans-serif;font-size:16px;line-height:1;}
+.pday.done{background:var(--herb,#8FAE5D);border-color:var(--ink);color:#FFF;}
+.pday.done .pday-d{color:rgba(255,255,255,.85);}
+.pday.today{border-color:var(--orange);border-width:2px;}
+/* a day that hasn't happened cannot be logged — say so visually, not just in a tooltip */
+.pday.future{opacity:.4;cursor:not-allowed;background:transparent;border-style:dashed;}
+.pday.future input{cursor:not-allowed;}
+
+.pgrid-wrap h3{font-family:'Anton',sans-serif;font-weight:400;font-size:21px;text-transform:uppercase;margin:0 0 14px;}
+.pgrid{background:var(--card);border:1.5px solid var(--ink);border-radius:8px;padding:20px 22px;overflow-x:auto;}
+.grow{display:flex;align-items:center;gap:14px;padding:3px 0;}
+.gwk{font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);min-width:74px;}
+.gdots{display:flex;gap:5px;}
+.gdot{width:15px;height:15px;border-radius:3px;background:var(--line);display:block;}
+.gdot.on{background:var(--herb,#8FAE5D);}
+.gdot.future{background:transparent;border:1px dashed var(--line-strong);}
+@media(max-width:640px){
+  .today-card{padding:22px 18px;}
+  .today-card .btn{width:100%;}
+  .pweek{padding:18px 14px;}
+  .pdays{gap:5px;}
+  .pgrid{padding:14px;}
+  .gwk{min-width:62px;}
+}
+
 /* ---------- Pro / upgrade ---------- */
 /* Same brushed-gold treatment as the Go Pro button, so the badge you end up
    with visibly matches the button you pressed to get it. */
@@ -634,6 +685,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       <a href="#matches">Matches</a>
       <a href="/recipes/">All recipes</a>
       <a href="#kitchen">My kitchen</a>
+      <a href="#progress">Progress</a>
       <a href="#how">How it works</a>
       <a href="/about.html">About</a>
     </nav>
@@ -698,27 +750,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <div class="plans-card-body" id="savedPlansPanel"><p class="hint plans-empty">Loading…</p></div>
   </details>
 
-  <details class="plans-card" id="checklistSection" style="display:none;" open>
-    <summary class="plans-card-head">
-      <h4>This week's cooking checklist</h4>
-      <span class="plans-card-head-right">
-        <span class="hint" id="checklistHint"></span>
-        <span class="chev" aria-hidden="true">▾</span>
-      </span>
-    </summary>
-    <div class="plans-card-body" id="checklistPanel"></div>
-  </details>
 
-  <details class="plans-card" id="historySection" style="display:none;">
-    <summary class="plans-card-head">
-      <h4>Your cooking history</h4>
-      <span class="plans-card-head-right">
-        <span class="hint" id="historyHint"></span>
-        <span class="chev" aria-hidden="true">▾</span>
-      </span>
-    </summary>
-    <div class="plans-card-body" id="historyPanel"></div>
-  </details>
 </div>
 
 <section class="hero-sec">
@@ -1193,6 +1225,15 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
   </div>
 </section>
 
+<section class="progress-sec" id="progress">
+  <div class="inner">
+    <p class="sec-eyebrow">Your progress</p>
+    <h2 class="sec-title">What you<br><span class="accent">actually cooked.</span></h2>
+    <p class="serif-line">one tick a day, and the weeks add up.</p>
+    <div id="progressBody" style="margin-top:36px;"></div>
+  </div>
+</section>
+
 <section class="method-sec" id="how">
   <div class="inner">
     <p class="sec-eyebrow">The Method</p>
@@ -1423,6 +1464,7 @@ function updateProUI(){
   if(up) up.style.display = isPro() ? 'none' : 'inline-block';
   renderChecklistCard();
   renderHistoryCard();
+  renderProgressSection();
   renderSavedPlansList();
 }
 document.getElementById('billingBtn').addEventListener('click', openBillingPortal);
@@ -1524,6 +1566,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session)=>{
     if(moved) showToast(`📖 ${moved} logged day${moved!==1?'s':''} added to your account`);
   }
   renderHistoryCard();
+  renderProgressSection();
   renderSavedPlansList();
   if(currentUser){ restoreProfileOnce(); renderPinChips(); }
   restoreLastWeek();
@@ -2205,6 +2248,14 @@ async function toggleFavourite(name){
   render();
 }
 async function toggleProgress(day, checked){
+  /* Refuse before touching any state. Checking further down meant the weekly
+     checkbox and the `progress` table were already updated by the time the
+     ledger refused, leaving the two out of step. */
+  if(checked && isFuture(dateForDay(day))){
+    showToast("That day hasn't happened yet.");
+    renderProgressSection();
+    return;
+  }
   progress[day] = checked;
   if(currentUser){
     await supabaseClient.from('progress').upsert({ user_id: currentUser.id, day, done: checked, updated_at: new Date().toISOString() });
@@ -2212,6 +2263,7 @@ async function toggleProgress(day, checked){
   // the checklist is also the history logger — no separate "log this day" step
   await logCookedDay(day, checked);
   renderChecklistCard();
+  renderProgressSection();
   if(weekState.activeSlots.length){ renderWeekUI(); snapshotLastWeek(); }
 }
 /* Clears this week's checklist only. cooked_days is a separate table and is
@@ -2220,6 +2272,7 @@ async function resetProgress(){
   progress = {};
   if(currentUser) await supabaseClient.from('progress').delete().eq('user_id', currentUser.id);
   renderChecklistCard();
+  renderProgressSection();
   if(weekState.activeSlots.length) renderWeekUI();
 }
 
@@ -2361,6 +2414,14 @@ async function logCookedDay(day, checked){
   const di = DAYS.indexOf(day);
   if(di < 0) return;
   const cooked_on = isoDate(addDays(parseISO(resolveWeekStart()), di));
+
+  /* You cannot have cooked something that has not happened yet. The checkbox is
+     disabled for future days, but this is the guard that matters — it protects
+     the ledger from anything that reaches this function another way. */
+  if(daysBetween(isoDate(new Date()), cooked_on) > 0){
+    console.warn('logCookedDay: refused a future date', cooked_on);
+    return;
+  }
 
   if(!checked){
     // unticking is a correction, so the row goes rather than becoming done:false
@@ -3588,6 +3649,148 @@ function renderChecklistCard(){
   panel.innerHTML = renderProgressHTML(hasPlan);
 }
 
+/* ---------- Progress section ----------
+   Logging used to be seven identical checkboxes buried in a card at the top of
+   the page. Two things were wrong with it:
+
+   1. You could tick days that had not happened yet, which is meaningless and
+      inflates streaks. Future days are now disabled outright.
+   2. "Did you cook?" with no reference to what made the tick feel arbitrary.
+      The plan already knows what was scheduled, so today's entry names the
+      meals. It becomes a record of something rather than a chore.
+
+   None of this can verify that you actually cooked — no habit tracker can. It
+   can only make an honest answer the easy one. */
+
+function mealsPlannedFor(iso){
+  const start = resolveWeekStart();
+  const offset = daysBetween(start, iso);
+  if(offset < 0 || offset > 6) return [];
+  const ws = weekState;
+  if(!ws.activeSlots || !ws.activeSlots.length || !ws.planIndex[offset]) return [];
+  return ws.activeSlots.map(slot=>{
+    const list = ws.candidatesBySlot[slot] ? ws.candidatesBySlot[slot].list : [];
+    const r = list[ws.planIndex[offset][slot]];
+    return r ? r.name : null;
+  }).filter(Boolean);
+}
+
+/* The day a tick would be recorded against, for a given weekday in the open
+   plan. Anything after today cannot be logged. */
+function dateForDay(day){
+  return isoDate(addDays(parseISO(resolveWeekStart()), DAYS.indexOf(day)));
+}
+function isFuture(iso){ return daysBetween(isoDate(new Date()), iso) > 0; }
+
+function renderTodayCard(){
+  const todayIso = isoDate(new Date());
+  const logged = cookedHistory.some(h=>h.cooked_on === todayIso);
+  const planned = mealsPlannedFor(todayIso);
+  const weekday = DAYS[(new Date().getDay() + 6) % 7];   // DAYS starts Monday
+  const inPlan = daysBetween(resolveWeekStart(), todayIso) >= 0 && daysBetween(resolveWeekStart(), todayIso) <= 6;
+
+  const meals = planned.length
+    ? `<ul class="today-meals">${planned.map(n=>`<li>${n}</li>`).join('')}</ul>`
+    : `<p class="hint" style="margin:0 0 16px;">No plan open for today — we'll record the day itself.</p>`;
+
+  return `
+    <div class="today-card ${logged?'done':''}">
+      <div>
+        <p class="today-label">${logged ? 'Logged' : 'Today'} · ${new Date().toLocaleDateString('en-GB',{weekday:'long', day:'numeric', month:'long'})}</p>
+        <h3 class="today-q">${logged ? 'You cooked today.' : 'Did you cook today?'}</h3>
+        ${meals}
+      </div>
+      <button class="btn ${logged?'secondary':''}" type="button"
+        onclick="toggleProgress('${weekday}', ${logged ? 'false' : 'true'})"
+        ${inPlan ? '' : 'disabled title="Today falls outside the week your plan covers"'}>
+        ${logged ? 'Undo' : '✓ Yes, I cooked'}
+      </button>
+    </div>`;
+}
+
+function renderProgressSection(){
+  const body = document.getElementById('progressBody');
+  if(!body) return;
+
+  if(!currentUser){
+    body.innerHTML = `<div class="pro-lock"><h4>Sign in to track your cooking</h4>
+      <p>Tick off the days you cook and we'll keep a permanent record — streaks, monthly totals, and a year at a glance.</p>
+      <button class="btn small" type="button" onclick="document.getElementById('showAuthBtn').click()">Create a free account</button></div>`;
+    return;
+  }
+  if(!isPro()){
+    body.innerHTML = `<div class="pro-lock"><h4>Cooking history is part of Pro</h4>
+      <p>Every day you tick off is kept permanently — streaks, monthly totals and a year of your cooking at a glance.</p>
+      <button class="btn small" type="button" onclick="openProModal('Cooking history')">Start 3-day free trial</button></div>`;
+    return;
+  }
+
+  const s = historyStats();
+  const byDate = {};
+  cookedHistory.forEach(h=>{ byDate[h.cooked_on] = h; });
+
+  /* This week's row. Days after today are disabled — you cannot log cooking
+     that has not happened. */
+  const start = resolveWeekStart();
+  const weekRow = DAYS.map((d, i)=>{
+    const iso = isoDate(addDays(parseISO(start), i));
+    const future = isFuture(iso);
+    const done = !!byDate[iso];
+    const today = iso === isoDate(new Date());
+    const title = future
+      ? `${d} ${shortDate(iso)} — hasn't happened yet`
+      : `${d} ${shortDate(iso)}${done ? ' — cooked' : ' — not logged'}`;
+    return `<label class="pday ${done?'done':''} ${future?'future':''} ${today?'today':''}" title="${escAttr(title)}">
+      <input type="checkbox" ${done?'checked':''} ${future?'disabled':''}
+        onchange="toggleProgress('${d}', this.checked)">
+      <span class="pday-d">${d.slice(0,3)}</span>
+      <span class="pday-n">${parseISO(iso).getDate()}</span>
+    </label>`;
+  }).join('');
+
+  // 12 weeks, oldest first, so it reads like a calendar
+  const thisMonday = mondayOf(new Date());
+  const grid = [];
+  for(let w = 11; w >= 0; w--){
+    const wkStart = addDays(thisMonday, -7 * w);
+    const dots = DAYS.map((d, i)=>{
+      const iso = isoDate(addDays(wkStart, i));
+      const rec = byDate[iso];
+      const meals = rec ? Object.values(rec.meals || {}) : [];
+      const cls = rec ? 'on' : (isFuture(iso) ? 'future' : 'off');
+      const title = rec
+        ? `${shortDate(iso)} — ${meals.length ? meals.join(', ') : 'cooked'}`
+        : `${shortDate(iso)}${isFuture(iso) ? '' : ' — not logged'}`;
+      return `<span class="gdot ${cls}" title="${escAttr(title)}"></span>`;
+    }).join('');
+    grid.push(`<div class="grow"><span class="gwk">${w === 0 ? 'This week' : shortDate(isoDate(wkStart))}</span><span class="gdots">${dots}</span></div>`);
+  }
+
+  body.innerHTML = `
+    ${renderTodayCard()}
+
+    <div class="pstats">
+      <div class="pstat"><b class="herb">${s.current}</b><span>Day streak</span></div>
+      <div class="pstat"><b>${s.longest}</b><span>Longest streak</span></div>
+      <div class="pstat"><b class="orange">${s.daysThisMonth}</b><span>Days this month</span></div>
+      <div class="pstat"><b>${s.totalMeals}</b><span>Meals cooked</span></div>
+    </div>
+
+    <div class="pweek">
+      <div class="pweek-head">
+        <h3>This week</h3>
+        <span class="hint">w/c ${shortDate(start)} · <a href="#" onclick="resetProgress();return false;" style="color:var(--orange-deep);">reset</a></span>
+      </div>
+      <div class="pdays">${weekRow}</div>
+      <p class="hint" style="margin:14px 0 0;">Days that haven't happened yet can't be ticked. Everything you log is kept permanently, so resetting the week doesn't lose it.</p>
+    </div>
+
+    <div class="pgrid-wrap">
+      <h3>Last 12 weeks</h3>
+      <div class="pgrid">${grid.join('')}</div>
+    </div>`;
+}
+
 function renderProgressHTML(hasPlan){
   const doneCount = DAYS.filter(d=>progress[d]).length;
   const start = resolveWeekStart();
@@ -4159,6 +4362,7 @@ document.getElementById('results').innerHTML = '<div class="empty">Loading recip
   cookedHistory = await loadHistory();
   if(currentUser) await mergeLocalHistory();
   renderHistoryCard();
+  renderProgressSection();
   renderSavedPlansList();
   restoreProfileOnce();
   restoreLastWeek();
