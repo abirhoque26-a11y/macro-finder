@@ -183,6 +183,12 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .shop-item .buy.stock{color:var(--herb,#8FAE5D);}
 .pantry-hit-note.uses{color:var(--herb,#8FAE5D);font-weight:600;}
 .shop-note .saved{color:var(--herb,#8FAE5D);}
+.saved-banner{display:flex;align-items:center;gap:16px;margin:0 0 18px;padding:18px 22px;
+  background:var(--herb,#8FAE5D);color:#FFF;border-radius:8px;border:1.5px solid var(--ink);flex-wrap:wrap;}
+.sb-fig{font-family:'Anton',sans-serif;font-size:40px;line-height:1;}
+.sb-txt{font-size:14px;line-height:1.5;max-width:460px;}
+.sb-txt strong{font-weight:700;}
+@media(max-width:560px){.saved-banner{padding:14px 16px;gap:12px;}.sb-fig{font-size:32px;}}
 .lards{display:flex;flex-wrap:wrap;gap:8px;}
 .lard{display:inline-flex;align-items:stretch;border:1.5px solid var(--line-strong);border-radius:999px;overflow:hidden;background:var(--card);}
 .lard.soon{border-color:var(--orange);background:rgba(232,85,29,.06);}
@@ -1175,6 +1181,13 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
           <button class="btn secondary small" id="wkSuggestBtn" type="button">✦ Suggest daily targets</button>
           <span class="hint" id="wkSuggestMsg" style="margin:0;"></span>
         </div>
+        <div class="field form-full" id="useUpRow" style="display:none;">
+          <label>Your kitchen <span class="badge optional">Optional</span></label>
+          <div class="chips">
+            <div class="chip" id="useUpChip" onclick="toggleUseUp()">♻ Use up what I already have</div>
+          </div>
+          <p class="hint" id="useUpHint"></p>
+        </div>
         <div class="field form-full">
           <label>Dietary requirements <span class="badge optional">Optional</span></label>
           <div class="chips" id="chip-diet-week">
@@ -1991,6 +2004,7 @@ function collectProfile(){
     larder,
     packOverrides,
     larderSaved,
+    useUpLeftovers,
     pantryStaples: document.getElementById('pantryStaples').checked,
     pinnedRecipes: pinnedRecipes.slice(),
     quickOnly: state.quickOnly,
@@ -2035,6 +2049,7 @@ function applyProfile(p){
     if(p.larder && typeof p.larder === 'object') larder = p.larder;
     if(p.packOverrides && typeof p.packOverrides === 'object') packOverrides = p.packOverrides;
     if(typeof p.larderSaved === 'number') larderSaved = p.larderSaved;
+    if(typeof p.useUpLeftovers === 'boolean') useUpLeftovers = p.useUpLeftovers;
     pruneLarder();
     if(typeof p.pantryStaples === 'boolean') document.getElementById('pantryStaples').checked = p.pantryStaples;
     if(Array.isArray(p.pinnedRecipes)) pinnedRecipes = p.pinnedRecipes.slice();
@@ -2297,6 +2312,8 @@ let larder = {};
 let packOverrides = {};
 /* Running total of what past shops saved by using stock already in. */
 let larderSaved = 0;
+/* Whether the week builder should favour recipes using existing stock. */
+let useUpLeftovers = true;
 let lastWeek = null;      // snapshot of the previous week's meals + which days were cooked
 let nextWeekMsg = '';     // "what changed and why" summary after a rollover
 let favourites = [];
@@ -3018,6 +3035,53 @@ function scoreRecipe(r, cal, protein){
   return score;
 }
 
+/* How much of what is already in your kitchen a recipe would use, in pounds.
+   Valuing it rather than counting items means a recipe using 200g of leftover
+   chicken outranks one using a pinch of leftover spinach. */
+function larderValueUsed(r){
+  if(!r || !r.ing) return 0;
+  let value = 0;
+  r.ing.forEach(function(pair){
+    const name = pair[0], qty = pair[1];
+    const ck = canonIng(name), nk = normIng(name);
+    const key = larder[ck] ? ck : (larder[nk] ? nk : null);
+    if(!key) return;
+    const ep = effectivePack(key);
+    if(!ep) return;
+    const m = String(qty).match(/^\s*([\d.]+)\s*([a-zA-Z]*)/);
+    if(!m) return;
+    const want = toPackUnit(parseFloat(m[1]), (m[2] || 'count').toLowerCase(), ep[1], key);
+    if(want == null) return;
+    const have = larder[key].unit === ep[1] ? larder[key].amount : 0;
+    value += (Math.min(want, have) / ep[0]) * ep[2];
+  });
+  return value;
+}
+
+/* Ranking nudge, not an override. A flat bonus does not work here: snack scores
+   cluster within ~60 points while dinners spread over ~400, so the same number
+   that gently nudges a dinner completely decides a snack. The bonus is therefore
+   scaled to how far apart the contenders in that slot actually are, and capped,
+   so it reorders near-ties in favour of your leftovers but can never pull in a
+   meal that misses your calorie and protein targets. */
+const USE_UP_MAX_BONUS = 420;
+const USE_UP_SPREAD_SHARE = 0.4;  // at most this much of a slot's own score band
+const USE_UP_BAND = 16;           // how many contenders count as "close enough"
+
+function applyLeftoverBias(pool){
+  if(!useUpLeftovers || pool.length < 2) return pool;
+  const band = pool.slice(0, USE_UP_BAND);
+  const spread = band[band.length - 1].score - band[0].score;
+  const room = Math.min(USE_UP_MAX_BONUS, spread * USE_UP_SPREAD_SHARE);
+  if(room <= 0) return pool;
+  const values = band.map(larderValueUsed);
+  const best = Math.max.apply(null, values);
+  if(best <= 0) return pool;
+  band.forEach(function(r, i){ r.score -= (values[i] / best) * room; });
+  pool.sort(function(a, b){ return a.score - b.score; });
+  return pool;
+}
+
 function phaseAdjustedScore(r, cal, protein){
   let score = scoreRecipe(r, cal, protein);
   const density = r.cal > 0 ? r.protein / r.cal : 0;
@@ -3451,6 +3515,9 @@ function buildWeek(){
       return {...r, score};
     });
     pool.sort((a,b)=>a.score-b.score);
+    // then, among the meals that already fit, prefer the ones that eat into
+    // what is sitting in your kitchen
+    applyLeftoverBias(pool);
     candidatesBySlot[slot] = { list: pool.slice(0,8), targetCal, targetProtein };
   });
 
@@ -4022,10 +4089,38 @@ function removeLarderItem(key){
   if(weekState.activeSlots && weekState.activeSlots.length) renderWeekUI();
 }
 
+/* The control only makes sense once there is something to use up, so it hides
+   itself when the kitchen is empty. */
+function renderUseUpControl(){
+  const row = document.getElementById('useUpRow');
+  const chip = document.getElementById('useUpChip');
+  const hint = document.getElementById('useUpHint');
+  if(!row || !chip) return;
+  const keys = Object.keys(larder);
+  if(!keys.length){ row.style.display = 'none'; return; }
+  row.style.display = '';
+  chip.classList.toggle('active', useUpLeftovers);
+  const worth = keys.reduce(function(sum, k){
+    const p = effectivePack(k);
+    return sum + (p ? (larder[k].amount / p[0]) * p[2] : 0);
+  }, 0);
+  hint.innerHTML = useUpLeftovers
+    ? `Meals that use your ${keys.length} leftover item${keys.length!==1?'s':''} (about \u00a3${worth.toFixed(2)}) are preferred, as long as they still fit your targets and filters.`
+    : `Your ${keys.length} leftover item${keys.length!==1?'s':''} will still come off the shopping list — they just will not influence which meals are chosen.`;
+}
+
+function toggleUseUp(){
+  useUpLeftovers = !useUpLeftovers;
+  saveProfileSoon();
+  renderUseUpControl();
+  showToast(useUpLeftovers ? '♻ Planning around your kitchen' : 'Planning without favouring leftovers');
+}
+
 function renderLarder(){
   const box = document.getElementById('larderBox');
   if(!box) return;
   pruneLarder();
+  renderUseUpControl();
   const keys = Object.keys(larder).sort();
   if(!keys.length){
     box.innerHTML = `<p class="hint" style="margin:0;">Nothing recorded yet. Build a week, press <strong>I've done this shop</strong> on the shopping list, then tick days off as you cook &mdash; what is left shows here and comes off next week's list.</p>`;
@@ -4264,6 +4359,11 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
   /* Two different, both-true numbers. The shop figure is what you hand over at
      the till; the ingredients figure is what the food you actually eat is
      worth. They differ because packs come in fixed sizes. */
+  const savedBanner = savedFromStock > 0.5
+    ? `<div class="saved-banner">
+         <span class="sb-fig">£${savedFromStock.toFixed(2)}</span>
+         <span class="sb-txt"><strong>saved on this shop</strong> by using what was already in your kitchen${larderSaved > 0.5 ? ` &middot; £${(larderSaved + savedFromStock).toFixed(2)} saved in total` : ''}</span>
+       </div>` : '';
   const savedBit = savedFromStock > 0.5
     ? `<strong class="saved">You saved about £${savedFromStock.toFixed(2)} by using what was already in your kitchen.</strong> `
     : '';
@@ -4318,7 +4418,7 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
       <button class="pager-btn" onclick="printShoppingList()" type="button">🖨 Print list</button>
     </div>
     <p class="hint" style="margin-bottom:16px;">Tick items off as you shop — or tick anything you already have at home. Pick your usual supermarket above to see one search link per item instead of five. Quantities are combined across the week where units match; mixed units are listed side by side rather than guessed at.</p>
-    ${sections}${shopNote}<div class="actions" style="margin-top:14px;"><button class="btn small" type="button" onclick="commitShop()">✓ I've done this shop</button></div>
+    ${savedBanner}${sections}${shopNote}<div class="actions" style="margin-top:14px;"><button class="btn small" type="button" onclick="commitShop()">✓ I've done this shop</button></div>
   </div>`;
 }
 
