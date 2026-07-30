@@ -184,11 +184,33 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .pantry-hit-note.uses{color:var(--herb,#8FAE5D);font-weight:600;}
 .pack-edit-link{font-size:11px;color:var(--muted);text-decoration:underline;margin-left:6px;}
 .pack-edit-link:hover{color:var(--orange-deep);}
-.pack-edit{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11.5px;}
-.pack-edit label{display:flex;flex-direction:column;gap:3px;font-family:'Oswald',sans-serif;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
-.pack-edit input{width:92px;padding:6px 8px;border:1.5px solid var(--line-strong);border-radius:4px;font-size:13px;}
-.pack-edit em{font-style:normal;font-size:10px;color:var(--muted);}
-.pack-edit a{font-size:11px;color:var(--muted);}
+/* Pack editor: each field is a label stacked over its input, and every control
+   shares one 34px row so the inputs, the unit suffix and the Save button all sit
+   on the same line instead of drifting apart. */
+.pack-edit{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:8px 0 4px;
+  padding:12px 14px;background:var(--cream);border:1.5px solid var(--line-strong);border-radius:6px;}
+.pe-field{display:flex;flex-direction:column;gap:5px;}
+.pe-lab{font-family:'Oswald',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);line-height:1;}
+.pe-input{display:flex;align-items:center;height:34px;background:var(--card);
+  border:1.5px solid var(--line-strong);border-radius:5px;padding:0 9px;gap:5px;}
+.pe-input:focus-within{border-color:var(--orange);}
+.pe-input input{width:74px;border:none;background:transparent;padding:0;height:100%;
+  font-size:14px;font-family:'Work Sans',sans-serif;color:var(--ink);}
+.pe-input input:focus{outline:none;}
+.pe-input em{font-style:normal;font-size:11.5px;color:var(--muted);white-space:nowrap;}
+.pe-input em.pre{order:-1;}
+.pe-actions{display:flex;align-items:center;gap:12px;height:34px;}
+.pe-actions .btn.small{padding:0 18px;height:34px;line-height:34px;}
+.pe-actions a{font-size:11.5px;color:var(--muted);text-decoration:underline;}
+.pe-actions a:hover{color:var(--orange-deep);}
+@media(max-width:560px){
+  .pack-edit{gap:10px;}
+  .pe-field{flex:1 1 calc(50% - 10px);}
+  .pe-input input{width:100%;}
+  .pe-actions{flex:1 1 100%;height:auto;}
+  .pe-actions .btn.small{flex:1;}
+}
 .shop-note{font-size:12.5px;line-height:1.6;color:var(--muted);margin:10px 0 0;}
 
 /* ---------- Progress section ---------- */
@@ -3919,12 +3941,22 @@ function openPackEdit(key, rowId){
   if(!p) return;
   const [size, unit, price] = p;
   row.innerHTML = `<span class="pack-edit">
-      <label>Pack size<input type="number" step="any" min="0" id="${rowId}-size" value="${size}"><em>${unit === 'count' ? 'items' : escHtml(unit)}</em></label>
-      <label>Price £<input type="number" step="0.01" min="0" id="${rowId}-price" value="${price.toFixed(2)}"></label>
-      <button type="button" class="btn small" onclick="savePackEdit('${escJsAttr(key)}','${escJsAttr(rowId)}')">Save</button>
-      <a href="#" onclick="renderWeekUI();return false;">cancel</a>
-      ${packOverrides[key] ? `<a href="#" onclick="resetPackEdit('${escJsAttr(key)}');return false;">reset to default</a>` : ''}
+      <span class="pe-field">
+        <span class="pe-lab">Pack size</span>
+        <span class="pe-input"><input type="number" step="any" min="0" id="${rowId}-size" value="${size}"><em>${unit === 'count' ? 'items' : escHtml(unit)}</em></span>
+      </span>
+      <span class="pe-field">
+        <span class="pe-lab">Price paid</span>
+        <span class="pe-input"><em class="pre">£</em><input type="number" step="0.01" min="0" id="${rowId}-price" value="${price.toFixed(2)}"></span>
+      </span>
+      <span class="pe-actions">
+        <button type="button" class="btn small" onclick="savePackEdit('${escJsAttr(key)}','${escJsAttr(rowId)}')">Save</button>
+        <a href="#" onclick="renderWeekUI();return false;">cancel</a>
+        ${packOverrides[key] ? `<a href="#" onclick="resetPackEdit('${escJsAttr(key)}');return false;">reset</a>` : ''}
+      </span>
     </span>`;
+  const first = document.getElementById(rowId + '-size');
+  if(first){ first.focus(); first.select(); }
 }
 
 function savePackEdit(key, rowId){
