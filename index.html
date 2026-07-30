@@ -182,6 +182,18 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .shop-item .buy.cupboard{color:var(--muted);font-weight:500;}
 .shop-item .buy.stock{color:var(--herb,#8FAE5D);}
 .pantry-hit-note.uses{color:var(--herb,#8FAE5D);font-weight:600;}
+.shop-note .saved{color:var(--herb,#8FAE5D);}
+.lards{display:flex;flex-wrap:wrap;gap:8px;}
+.lard{display:inline-flex;align-items:stretch;border:1.5px solid var(--line-strong);border-radius:999px;overflow:hidden;background:var(--card);}
+.lard.soon{border-color:var(--orange);background:rgba(232,85,29,.06);}
+.lard.editing{padding:6px 8px;gap:8px;align-items:center;border-radius:8px;}
+.lard-main{background:none;border:none;cursor:pointer;font-family:'Work Sans',sans-serif;font-size:12.5px;color:var(--ink);padding:8px 4px 8px 14px;display:flex;align-items:center;gap:6px;}
+.lard-main b{font-weight:700;}
+.lard-main em{font-style:normal;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--orange-deep);}
+.lard-main:hover{color:var(--orange-deep);}
+.lard-x{background:none;border:none;cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:0 12px 0 6px;}
+.lard-x:hover{color:var(--orange-deep);}
+.soon-t{color:var(--orange-deep);}
 .pack-edit-link{font-size:11px;color:var(--muted);text-decoration:underline;margin-left:6px;}
 .pack-edit-link:hover{color:var(--orange-deep);}
 /* Pack editor: each field is a label stacked over its input, and every control
@@ -1978,6 +1990,7 @@ function collectProfile(){
     pantry: pantryItems.slice(),
     larder,
     packOverrides,
+    larderSaved,
     pantryStaples: document.getElementById('pantryStaples').checked,
     pinnedRecipes: pinnedRecipes.slice(),
     quickOnly: state.quickOnly,
@@ -2021,6 +2034,8 @@ function applyProfile(p){
     if(Array.isArray(p.pantry)) pantryItems = p.pantry.slice();
     if(p.larder && typeof p.larder === 'object') larder = p.larder;
     if(p.packOverrides && typeof p.packOverrides === 'object') packOverrides = p.packOverrides;
+    if(typeof p.larderSaved === 'number') larderSaved = p.larderSaved;
+    pruneLarder();
     if(typeof p.pantryStaples === 'boolean') document.getElementById('pantryStaples').checked = p.pantryStaples;
     if(Array.isArray(p.pinnedRecipes)) pinnedRecipes = p.pinnedRecipes.slice();
     if(typeof p.quickOnly === 'boolean'){ state.quickOnly = p.quickOnly; document.getElementById('quickChip').classList.toggle('active', p.quickOnly); }
@@ -2280,6 +2295,8 @@ let larder = {};
    trolley, so once you correct one it is used for every future shop and the
    leftover maths becomes real rather than approximate. */
 let packOverrides = {};
+/* Running total of what past shops saved by using stock already in. */
+let larderSaved = 0;
 let lastWeek = null;      // snapshot of the previous week's meals + which days were cooked
 let nextWeekMsg = '';     // "what changed and why" summary after a rollover
 let favourites = [];
@@ -2382,6 +2399,8 @@ async function toggleProgress(day, checked){
   }
   // the checklist is also the history logger — no separate "log this day" step
   await logCookedDay(day, checked);
+  // the checklist is also what moves food out of, or back into, the kitchen
+  applyDayToLarder(day, checked);
   renderChecklistCard();
   renderProgressSection();
   if(weekState.activeSlots.length){ renderWeekUI(); snapshotLastWeek(); }
@@ -3878,19 +3897,113 @@ function packCost(key, amountInPackUnit){
 /* ---------- Larder: what is left after a shop ----------
    Pressing "I've done this shop" assumes you bought the packs listed and will
    cook the week. What is left is stock, and it comes off next week's list. */
+/* How long a fresh item is worth counting on. Anything older is dropped,
+   because a larder claiming you still have week-old salad is worse than one
+   claiming nothing. Cupboard stock never expires. */
+const SHELF_DAYS_DEFAULT = 12;
+const SHELF_DAYS = {
+  3: ['rocket','watercress','mixed leaves','lettuce','romaine lettuce','coriander','basil','lettuce and tomato'],
+  5: ['raspberries','blueberries','strawberries','mixed berries','spinach','kale','mangetout','asparagus',
+      'salmon fillet','cod fillet','smoked haddock fillet','tuna steak','king prawns','raw king prawns','prawns',
+      'beef mince','lean beef mince','lamb mince','turkey mince','chicken breast','chicken thigh','beef strips',
+      'lamb leg','lamb chops','cream','hollandaise sauce'],
+  8: ['cherry tomatoes','tomato','cucumber','courgette','mushroom','mushrooms','mixed mushrooms','broccoli',
+      'tenderstem broccoli','green beans','avocado','banana','frozen banana','halloumi','paneer','feta',
+      'cottage cheese','greek yogurt','fat greek yogurt','skyr or high protein yogurt','milk','whole milk',
+      'smoked salmon','turkey slices','bacon','chicken sausages','sausage','wholemeal bread','bagel',
+      'english muffin','wholemeal bun','wholemeal pitta','hummus','tortilla wrap','large tortilla wraps','tortilla']
+};
+function shelfDaysFor(key){
+  for(const days of Object.keys(SHELF_DAYS)) if(SHELF_DAYS[days].includes(key)) return Number(days);
+  return SHELF_DAYS_DEFAULT;
+}
+function daysOld(entry){
+  if(!entry || !entry.added) return 0;
+  return Math.floor((Date.now() - new Date(entry.added).getTime()) / 86400000);
+}
+function pruneLarder(){
+  let dropped = 0;
+  Object.keys(larder).forEach(k=>{
+    const p = PACKS[k];
+    if(p && p[3] === 'c') return;
+    if(daysOld(larder[k]) > shelfDaysFor(k)){ delete larder[k]; dropped++; }
+  });
+  return dropped;
+}
+
+/* Add or remove stock. The added-date only resets when stock goes up, so eating
+   half a bag does not make the rest look freshly bought. */
+function adjustLarder(key, unit, delta){
+  const cur = (larder[key] && larder[key].unit === unit) ? larder[key].amount : 0;
+  const next = Math.round((cur + delta) * 10) / 10;
+  if(next > 0.01){
+    const kept = larder[key] && larder[key].added;
+    larder[key] = { amount: next, unit,
+                    added: delta > 0 ? new Date().toISOString() : (kept || new Date().toISOString()) };
+  } else {
+    delete larder[key];
+  }
+}
+
+/* What a set of meals consumes, as { packKey: amountInPackUnit }. Looked up by
+   recipe name so it still works for a day logged weeks ago. */
+function ingredientsForMeals(mealNames){
+  const out = {};
+  (mealNames || []).forEach(nm=>{
+    const r = RECIPES.find(x=>x.name === nm);
+    if(!r) return;
+    r.ing.forEach(([name, qty])=>{
+      const ck = canonIng(name), nk = normIng(name);
+      const key = PACKS[ck] ? ck : (PACKS[nk] ? nk : null);
+      if(!key || PACKS[key][3] === 'c') return;
+      const m = String(qty).match(/^\s*([\d.]+)\s*([a-zA-Z]*)/);
+      if(!m) return;
+      const amt = toPackUnit(parseFloat(m[1]), (m[2] || 'count').toLowerCase(), PACKS[key][1], key);
+      if(amt != null) out[key] = (out[key] || 0) + amt;
+    });
+  });
+  return out;
+}
+
+/* Ticking a day off means that day's food has been eaten; unticking puts it
+   back. Without this the larder assumed you cooked everything you planned, and
+   one week of eating out left it confidently wrong. */
+function applyDayToLarder(day, cooked){
+  const iso = dateForDay(day);
+  const rec = cookedHistory.find(h=>h.cooked_on === iso);
+  let names = rec ? Object.values(rec.meals || {}) : [];
+  if(!names.length){
+    const di = DAYS.indexOf(day), ws = weekState;
+    if(di >= 0 && ws.activeSlots && ws.planIndex[di]){
+      names = ws.activeSlots.map(function(slot){
+        const list = ws.candidatesBySlot[slot] ? ws.candidatesBySlot[slot].list : [];
+        const r = list[ws.planIndex[di][slot]];
+        return r ? r.name : null;
+      }).filter(Boolean);
+    }
+  }
+  const used = ingredientsForMeals(names);
+  Object.keys(used).forEach(function(key){
+    adjustLarder(key, PACKS[key][1], cooked ? -used[key] : used[key]);
+  });
+  if(Object.keys(used).length) saveProfileSoon();
+}
+
+/* Recording a shop adds what you bought. It does NOT deduct the week's cooking:
+   that happens day by day as you tick the checklist, which is the only thing
+   that knows what you actually ate. */
 function commitShop(){
   const items = (lastShopList && lastShopList.pendingShop) || [];
   if(!items.length){ showToast('Build a week first.'); return; }
-  let changed = 0;
-  items.forEach(it=>{
-    const had = (larder[it.key] && larder[it.key].unit === it.unit) ? larder[it.key].amount : 0;
-    const left = Math.max(0, had + it.bought - it.need);
-    if(left > 0.01){ larder[it.key] = { amount: Math.round(left * 10) / 10, unit: it.unit }; changed++; }
-    else delete larder[it.key];
+  let added = 0;
+  items.forEach(function(it){
+    if(it.bought > 0.01){ adjustLarder(it.key, it.unit, it.bought); added++; }
   });
+  larderSaved = Math.round((larderSaved + (lastShopList.savedFromStock || 0)) * 100) / 100;
   saveProfileSoon();
   renderLarder();
-  showToast(`✓ Shop recorded — ${changed} item${changed !== 1 ? 's' : ''} left over for next week`);
+  showToast('\u2713 Shop recorded \u2014 ' + added + ' item' + (added !== 1 ? 's' : '') +
+            ' added. Tick days off as you cook and they come back down.');
   if(weekState.activeSlots && weekState.activeSlots.length) renderWeekUI();
 }
 
@@ -3912,21 +4025,65 @@ function removeLarderItem(key){
 function renderLarder(){
   const box = document.getElementById('larderBox');
   if(!box) return;
+  pruneLarder();
   const keys = Object.keys(larder).sort();
   if(!keys.length){
-    box.innerHTML = `<p class="hint" style="margin:0;">Nothing recorded yet. Build a week, then press <strong>I've done this shop</strong> on the shopping list and whatever is left over is tracked here — it comes off next week's list automatically.</p>`;
+    box.innerHTML = `<p class="hint" style="margin:0;">Nothing recorded yet. Build a week, press <strong>I've done this shop</strong> on the shopping list, then tick days off as you cook &mdash; what is left shows here and comes off next week's list.</p>`;
     return;
   }
-  const worth = keys.reduce((sum, k)=>{
-    const p = PACKS[k];
+  const worth = keys.reduce(function(sum, k){
+    const p = effectivePack(k);
     return sum + (p ? (larder[k].amount / p[0]) * p[2] : 0);
   }, 0);
+  const chips = keys.map(function(k){
+    const life = shelfDaysFor(k), age = daysOld(larder[k]);
+    const left = life - age;
+    const cupboard = PACKS[k] && PACKS[k][3] === 'c';
+    const soon = !cupboard && left <= 2;
+    const unit = larder[k].unit === 'count' ? '' : escHtml(larder[k].unit);
+    return `<span class="lard ${soon ? 'soon' : ''}" id="lard-${escAttr(k).replace(/[^A-Za-z0-9]/g,'')}">
+      <button type="button" class="lard-main" onclick="editLarder('${escJsAttr(k)}')" title="Change the amount">
+        ${escHtml(k)} <b>${parseFloat(larder[k].amount.toFixed(1))}${unit}</b>${soon ? `<em>use in ${Math.max(0,left)}d</em>` : ''}
+      </button>
+      <button type="button" class="lard-x" onclick="removeLarderItem('${escJsAttr(k)}')" title="Remove" aria-label="Remove ${escAttr(k)}">&times;</button>
+    </span>`;
+  }).join('');
+  const soonCount = keys.filter(function(k){
+    return !(PACKS[k] && PACKS[k][3] === 'c') && (shelfDaysFor(k) - daysOld(larder[k])) <= 2;
+  }).length;
   box.innerHTML = `
     <div class="pweek-head" style="margin-bottom:12px;">
       <h3>Still in your kitchen</h3>
-      <span class="hint">${keys.length} item${keys.length!==1?'s':''} · about £${worth.toFixed(2)} · <a href="#" onclick="clearLarder();return false;" style="color:var(--orange-deep);">clear</a></span>
+      <span class="hint">${keys.length} item${keys.length!==1?'s':''} &middot; about \u00a3${worth.toFixed(2)}${soonCount ? ` &middot; <strong class="soon-t">${soonCount} to use soon</strong>` : ''} &middot; <a href="#" onclick="clearLarder();return false;" style="color:var(--orange-deep);">clear</a></span>
     </div>
-    <div class="chips">${keys.map(k=>`<div class="chip active" onclick="removeLarderItem('${escJsAttr(k)}')" title="Remove">${escHtml(k)} ${parseFloat(larder[k].amount.toFixed(1))}${larder[k].unit === 'count' ? '' : escHtml(larder[k].unit)} ✕</div>`).join('')}</div>`;
+    <div class="lards">${chips}</div>
+    ${larderSaved > 0.5 ? `<p class="hint" style="margin:12px 0 0;">Using this stock has saved you about <strong>\u00a3${larderSaved.toFixed(2)}</strong> so far.</p>` : ''}`;
+}
+
+/* Amounts drift from reality — you use a bit more, someone else takes some.
+   Letting people correct a number is what stops them abandoning the whole
+   thing the first time it is wrong. */
+function editLarder(key){
+  const el = document.getElementById('lard-' + key.replace(/[^A-Za-z0-9]/g,''));
+  if(!el || !larder[key]) return;
+  const unit = larder[key].unit === 'count' ? 'items' : larder[key].unit;
+  el.outerHTML = `<span class="lard editing">
+      <span class="pe-input"><input type="number" step="any" min="0" id="lard-edit" value="${larder[key].amount}"><em>${escHtml(unit)}</em></span>
+      <button type="button" class="btn small" onclick="saveLarderEdit('${escJsAttr(key)}')">Save</button>
+      <a href="#" onclick="renderLarder();return false;">cancel</a>
+    </span>`;
+  const inp = document.getElementById('lard-edit');
+  if(inp){ inp.focus(); inp.select(); }
+}
+
+function saveLarderEdit(key){
+  const v = parseFloat((document.getElementById('lard-edit') || {}).value);
+  if(!(v >= 0)){ showToast('Enter an amount.'); return; }
+  if(v < 0.01) delete larder[key];
+  else larder[key] = { amount: Math.round(v * 10) / 10, unit: larder[key].unit, added: larder[key].added };
+  saveProfileSoon();
+  renderLarder();
+  if(weekState.activeSlots && weekState.activeSlots.length) renderWeekUI();
 }
 
 
@@ -4008,6 +4165,7 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
   const stapleBox = document.getElementById('pantryStaples');
   const useStaples = stapleBox ? stapleBox.checked : true;
   let shopTotal = 0;      // what the actual shop costs, not the sum of servings
+  let savedFromStock = 0; // value of what you did not have to buy again
   const pendingShop = [];  // per-item buy/need, so the larder can be updated after shopping
   lastShopList = { sections: [], weeklyCost, shopTotal: 0 };
   // how many distinct things you actually have to buy — used by the coach summary
@@ -4052,6 +4210,10 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
         }
       }
       if(packInfo) shopTotal += packInfo.cost;
+      if(alreadyHave > 0 && packKey){
+        const ep = effectivePack(packKey);
+        if(ep) savedFromStock += (alreadyHave / ep[0]) * ep[2];
+      }
       if(packKey && packInfo && packInfo.kind === 'f'){
         pendingShop.push({ key: packKey, unit: PACKS[packKey][1],
                            bought: packInfo.packs * packInfo.size,
@@ -4097,13 +4259,19 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
 
   lastShopList.shopTotal = shopTotal;
   lastShopList.pendingShop = pendingShop;
+  lastShopList.savedFromStock = Math.round(savedFromStock * 100) / 100;
 
   /* Two different, both-true numbers. The shop figure is what you hand over at
      the till; the ingredients figure is what the food you actually eat is
      worth. They differ because packs come in fixed sizes. */
-  const shopNote = `<p class="shop-note">£${shopTotal.toFixed(2)} is what this shop costs &mdash; whole packs, not exact amounts.
+  const savedBit = savedFromStock > 0.5
+    ? `<strong class="saved">You saved about £${savedFromStock.toFixed(2)} by using what was already in your kitchen.</strong> `
+    : '';
+  const runningBit = larderSaved > 0.5
+    ? ` That is £${(larderSaved + savedFromStock).toFixed(2)} saved this way so far.` : '';
+  const shopNote = `<p class="shop-note">${savedBit}£${shopTotal.toFixed(2)} is what this shop costs &mdash; whole packs, not exact amounts.
     The food you'll actually eat is worth about £${weeklyCost.toFixed(2)}; the difference is what's left in the cupboard
-    for next week. Long-life items are charged only for the portion used. Prices are estimates, not live supermarket data.</p>`;
+    for next week. Long-life items are charged only for the portion used. Prices are estimates, not live supermarket data.${runningBit}</p>`;
 
   const storeOptions = [`<option value="all" ${preferredStore==='all'?'selected':''}>All stores</option>`]
     .concat(STORES.map(st=>`<option value="${st.id}" ${preferredStore===st.id?'selected':''}>${st.label}</option>`)).join('');
