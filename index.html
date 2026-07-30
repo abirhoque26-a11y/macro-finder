@@ -3597,43 +3597,69 @@ function pickMeal(di, slot, idx){
   renderWeekUI();
 }
 
-/* One-click budget fix: applies the biggest money-saving swaps (largest first)
-   until the week is back within budget, instead of the user doing each by hand. */
+/* Which alternatives are worth fully re-pricing. Pricing all eight candidates
+   in every cell means hundreds of full shop rebuilds, so this shortlists the
+   ones most likely to help: the cheapest few by serving price, plus anything
+   that draws on what is already in your kitchen, since that can beat a
+   nominally cheaper recipe once packs are taken into account. */
+const BUDGET_SWAP_TRIES = 3;
+function budgetSwapCandidates(cands, curIdx){
+  const idx = cands.map((c,i)=>i).filter(i=>i !== curIdx);
+  const cheap = idx.slice().sort((a,b)=>cands[a].price-cands[b].price).slice(0, BUDGET_SWAP_TRIES);
+  const stocky = Object.keys(larder).length
+    ? idx.filter(i=>!cheap.includes(i) && larderValueUsed(cands[i]) > 0)
+         .sort((a,b)=>larderValueUsed(cands[b])-larderValueUsed(cands[a])).slice(0,1)
+    : [];
+  return cheap.concat(stocky);
+}
+
+/* One-click budget fix: repeatedly applies whichever single swap takes the most
+   off the actual shop, re-pricing after each one because pack effects interact
+   — two meals sharing a pack means the second swap saves less than it would
+   alone. Stops as soon as the week is within budget. */
 let autoSwapMsg = '';
+/* Each pass re-prices the whole week for every shortlisted alternative, so it
+   is bounded by time as well as count — a click that locks the page up for two
+   seconds is worse than one that says "press me again". */
+const BUDGET_SWAP_PASSES = 24;
+const BUDGET_SWAP_MS = 600;
 function applyBudgetSwaps(){
   const ws = weekState;
   if(!ws.weeklyBudget || !ws.activeSlots.length) return;
-  const weekCost = ()=>{
-    let c = 0;
-    DAYS.forEach((day,di)=>ws.activeSlots.forEach(slot=>{
-      const l = ws.candidatesBySlot[slot].list;
-      if(l.length) c += l[ws.planIndex[di][slot]].price;
+  const cost = ()=> shopCostFor(planMatrixFrom(ws.planIndex), ws.activeSlots).shopTotal;
+  const before = cost();
+  const started = performance.now();
+  let applied = 0, hitLimit = false;
+  for(let pass = 0; ; pass++){
+    let bestCost = cost();
+    if(bestCost <= ws.weeklyBudget) break;
+    if(pass >= BUDGET_SWAP_PASSES || performance.now() - started > BUDGET_SWAP_MS){ hitLimit = true; break; }
+    let best = null;
+    DAYS.forEach((day, di)=>ws.activeSlots.forEach(slot=>{
+      const cands = ws.candidatesBySlot[slot].list;
+      if(cands.length < 2) return;
+      const curIdx = ws.planIndex[di][slot];
+      budgetSwapCandidates(cands, curIdx).forEach(i=>{
+        ws.planIndex[di][slot] = i;
+        const c = cost();
+        if(c < bestCost - 0.005){ bestCost = c; best = { di, slot, i }; }
+        ws.planIndex[di][slot] = curIdx;
+      });
     }));
-    return c;
-  };
-  const ideas = [];
-  DAYS.forEach((day,di)=>ws.activeSlots.forEach(slot=>{
-    const cands = ws.candidatesBySlot[slot].list;
-    if(cands.length < 2) return;
-    const current = cands[ws.planIndex[di][slot]];
-    let bestIdx = ws.planIndex[di][slot], bestPrice = current.price;
-    cands.forEach((c,i)=>{ if(c.price < bestPrice){ bestPrice = c.price; bestIdx = i; } });
-    const saving = current.price - bestPrice;
-    if(saving > 0.01) ideas.push({ di, slot, bestIdx, saving });
-  }));
-  ideas.sort((a,b)=>b.saving-a.saving);
-  let applied = 0, saved = 0;
-  for(const idea of ideas){
-    if(weekCost() <= ws.weeklyBudget) break;
-    ws.planIndex[idea.di][idea.slot] = idea.bestIdx;
-    applied++; saved += idea.saving;
+    if(!best) break;
+    ws.planIndex[best.di][best.slot] = best.i;
+    applied++;
   }
+  const after = cost();
+  const saved = before - after;
   if(applied){
-    const stillOver = weekCost() > ws.weeklyBudget;
-    autoSwapMsg = `Applied ${applied} money-saving swap${applied!==1?'s':''} — saved £${saved.toFixed(2)}. ` +
-      (stillOver ? 'Still slightly over — these are now the cheapest recipes that match your filters.' : "You're now within budget. Swap any meal back if you preferred the original.");
+    const stillOver = after > ws.weeklyBudget;
+    autoSwapMsg = `Applied ${applied} money-saving swap${applied!==1?'s':''} — £${saved.toFixed(2)} off the shop, now £${after.toFixed(2)}. ` +
+      (!stillOver ? "You're now within budget. Swap any meal back if you preferred the original."
+       : hitLimit ? 'Still over, and there are more savings to find — press the button again to keep going.'
+       : 'Still over — these are now the cheapest recipes that match your filters. Try relaxing a filter, or raising the budget.');
   } else {
-    autoSwapMsg = 'No cheaper swaps available within your current filters.';
+    autoSwapMsg = 'No swap actually lowers the shop here — cheaper-looking recipes would need new packs opened, which costs more than it saves.';
   }
   renderWeekUI();
   document.querySelector('.autoswap-note')?.scrollIntoView({behavior:'smooth', block:'center'});
@@ -4228,7 +4254,11 @@ function resetPackEdit(key){
   renderWeekUI();
 }
 
-function buildShoppingListHTML(planMatrix, slots, weeklyCost){
+/* Working out what a week costs at the till is needed in two places: rendering
+   the shopping list, and judging whether a swap would really save money. Both
+   go through the three helpers below, so the figure the budget checks and the
+   figure printed on the list can never drift apart. */
+function aggregateShopItems(planMatrix, slots){
   const map = {};
   planMatrix.forEach((dayPlan)=>{
     slots.forEach(slot=>{
@@ -4245,13 +4275,88 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
       });
     });
   });
-
-  const cats = {};
   Object.values(map).forEach(item=>{
     if(item.spellings){
       item.display = Object.entries(item.spellings)
         .sort((a,b)=>b[1]-a[1] || a[0].length-b[0].length)[0][0];
     }
+  });
+  return map;
+}
+
+function shopItemUnits(item){
+  const byUnit = {}, unparsedCounts = {};
+  item.entries.forEach(e=>{
+    const p = parseQty(e.qty);
+    if(p){ byUnit[p.unit] = (byUnit[p.unit]||0) + p.amount; }
+    else { unparsedCounts[e.qty] = (unparsedCounts[e.qty]||0) + 1; }
+  });
+  return { byUnit, unparsedCounts };
+}
+
+/* Prices one line of the list: which pack it maps to, how much of it your
+   kitchen already covers, and what the remainder costs in whole packs. */
+function priceShopItem(item, byUnit, useStaples){
+  const packKey = canonIng(item.display) in PACKS ? canonIng(item.display)
+                : (normIng(item.display) in PACKS ? normIng(item.display) : null);
+  let packInfo = null, alreadyHave = 0, neededTotal = 0, saved = 0;
+  if(packKey && !(useStaples && isStaple(item.display))){
+    const pu = PACKS[packKey][1];
+    let inPackUnits = 0, converted = false;
+    Object.entries(byUnit).forEach(([unit, amt])=>{
+      const c = toPackUnit(amt, unit, pu, packKey);
+      if(c != null){ inPackUnits += c; converted = true; }
+    });
+    if(converted){
+      neededTotal = inPackUnits;
+      // leftovers from previous shops come off before we work out packs
+      const stock = larder[packKey];
+      if(stock && stock.unit === pu) alreadyHave = Math.min(stock.amount, inPackUnits);
+      packInfo = packCost(packKey, inPackUnits - alreadyHave);
+      if(packInfo){ packInfo.need = neededTotal; packInfo.fromStock = alreadyHave; }
+    }
+  }
+  if(alreadyHave > 0 && packKey){
+    const ep = effectivePack(packKey);
+    if(ep) saved = (alreadyHave / ep[0]) * ep[2];
+  }
+  return { packKey, packInfo, alreadyHave, neededTotal, saved };
+}
+
+/* What a plan actually costs at the till, with your leftovers already taken
+   off. This is the number the budget is measured against. */
+function shopCostFor(planMatrix, slots){
+  const stapleBox = document.getElementById('pantryStaples');
+  const useStaples = stapleBox ? stapleBox.checked : true;
+  const map = aggregateShopItems(planMatrix, slots);
+  let total = 0, saved = 0;
+  Object.values(map).forEach(item=>{
+    const p = priceShopItem(item, shopItemUnits(item).byUnit, useStaples);
+    if(p.packInfo) total += p.packInfo.cost;
+    saved += p.saved;
+  });
+  return { shopTotal: Math.round(total*100)/100, savedFromStock: Math.round(saved*100)/100 };
+}
+
+/* Builds the day-by-day recipe grid a costing needs, for any set of choices —
+   used to price a swap before it is applied. */
+function planMatrixFrom(planIndex){
+  const ws = weekState;
+  return DAYS.map((day, di)=>{
+    const dayPlan = {};
+    ws.activeSlots.forEach(slot=>{
+      const cands = ws.candidatesBySlot[slot].list;
+      dayPlan[slot] = cands.length ? cands[planIndex[di][slot]] : null;
+    });
+    return dayPlan;
+  });
+}
+
+function buildShoppingListHTML(planMatrix, slots, weeklyCost){
+  const map = aggregateShopItems(planMatrix, slots);
+
+  const cats = {};
+  Object.values(map).forEach(item=>{
     if(!cats[item.category]) cats[item.category]=[];
     cats[item.category].push(item);
   });
@@ -4270,13 +4375,7 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
     if(!cats[cat] || !cats[cat].length) return;
     const printItems = [];
     const items = cats[cat].sort((a,b)=>a.display.localeCompare(b.display)).map(item=>{
-      const byUnit = {};
-      const unparsedCounts = {};
-      item.entries.forEach(e=>{
-        const p = parseQty(e.qty);
-        if(p){ byUnit[p.unit] = (byUnit[p.unit]||0) + p.amount; }
-        else { unparsedCounts[e.qty] = (unparsedCounts[e.qty]||0) + 1; }
-      });
+      const { byUnit, unparsedCounts } = shopItemUnits(item);
       const totalParts = Object.entries(byUnit).map(([unit,amt])=> `${parseFloat(amt.toFixed(2))}${unit?(' '+unit):'x'}`);
       Object.entries(unparsedCounts).forEach(([qty,count])=>{
         totalParts.push(count > 1 ? `${qty} ×${count}` : qty);
@@ -4285,30 +4384,11 @@ function buildShoppingListHTML(planMatrix, slots, weeklyCost){
 
       /* Price what you actually have to buy. Staples are skipped when the user
          says they already have the basics, exactly as the recipe costing does. */
-      const packKey = canonIng(item.display) in PACKS ? canonIng(item.display)
-                    : (normIng(item.display) in PACKS ? normIng(item.display) : null);
-      let packInfo = null, alreadyHave = 0, neededTotal = 0;
-      if(packKey && !(useStaples && isStaple(item.display))){
-        const pu = PACKS[packKey][1];
-        let inPackUnits = 0, converted = false;
-        Object.entries(byUnit).forEach(([unit, amt])=>{
-          const c = toPackUnit(amt, unit, pu, packKey);
-          if(c != null){ inPackUnits += c; converted = true; }
-        });
-        if(converted){
-          neededTotal = inPackUnits;
-          // leftovers from previous shops come off before we work out packs
-          const stock = larder[packKey];
-          if(stock && stock.unit === pu) alreadyHave = Math.min(stock.amount, inPackUnits);
-          packInfo = packCost(packKey, inPackUnits - alreadyHave);
-          if(packInfo){ packInfo.need = neededTotal; packInfo.fromStock = alreadyHave; }
-        }
-      }
+      const priced = priceShopItem(item, byUnit, useStaples);
+      const packKey = priced.packKey, packInfo = priced.packInfo;
+      const alreadyHave = priced.alreadyHave, neededTotal = priced.neededTotal;
       if(packInfo) shopTotal += packInfo.cost;
-      if(alreadyHave > 0 && packKey){
-        const ep = effectivePack(packKey);
-        if(ep) savedFromStock += (alreadyHave / ep[0]) * ep[2];
-      }
+      savedFromStock += priced.saved;
       if(packKey && packInfo && packInfo.kind === 'f'){
         pendingShop.push({ key: packKey, unit: PACKS[packKey][1],
                            bought: packInfo.packs * packInfo.size,
@@ -4767,7 +4847,7 @@ function setWeekView(v){
    Reads back the week that was just built in plain English. Every number here
    is computed from the actual plan — nothing is estimated or invented. Framed
    around what you'll cook and buy, not around restriction. */
-function buildCoachSummary(dayTotals, weeklyCost, weeklyBudget){
+function buildCoachSummary(dayTotals, weeklyCost, weeklyBudget, shopSpend, savedFromStock){
   const avgCal = Math.round(dayTotals.reduce((s,d)=>s+d.cal,0)/7);
   const avgProtein = Math.round(dayTotals.reduce((s,d)=>s+d.protein,0)/7);
   const targetCal = parseFloat(document.getElementById('wkCal').value);
@@ -4781,13 +4861,19 @@ function buildCoachSummary(dayTotals, weeklyCost, weeklyBudget){
       ? `That hits your protein target <span class="good">every day this week</span>.`
       : `That meets your ${targetProtein}g protein target on <strong>${proteinDays} of 7 days</strong>.`);
   }
-  const costBit = `The whole week comes to <strong>£${weeklyCost.toFixed(2)}</strong>`;
-  if(weeklyBudget && weeklyCost <= weeklyBudget){
-    bits.push(`${costBit} — <span class="good">£${(weeklyBudget-weeklyCost).toFixed(2)} under your budget</span>.`);
+  /* Budget talk uses the shop figure, because that is the money that actually
+     leaves your account. The stock credit is spelled out so an over-budget week
+     does not look like it is charging you for food you already own. */
+  const spend = (typeof shopSpend === 'number') ? shopSpend : weeklyCost;
+  const stockBit = savedFromStock > 0.5
+    ? ` That is after <span class="good">£${savedFromStock.toFixed(2)} covered by your kitchen</span>.` : '';
+  const costBit = `This week's shop comes to <strong>£${spend.toFixed(2)}</strong>`;
+  if(weeklyBudget && spend <= weeklyBudget){
+    bits.push(`${costBit} — <span class="good">£${(weeklyBudget-spend).toFixed(2)} under your budget</span>.${stockBit}`);
   } else if(weeklyBudget){
-    bits.push(`${costBit}, which is £${(weeklyCost-weeklyBudget).toFixed(2)} over your £${weeklyBudget.toFixed(2)} budget — there are swap suggestions below.`);
+    bits.push(`${costBit}, which is £${(spend-weeklyBudget).toFixed(2)} over your £${weeklyBudget.toFixed(2)} budget — there are swap suggestions below.${stockBit}`);
   } else {
-    bits.push(`${costBit}, about £${(weeklyCost/7).toFixed(2)} a day.`);
+    bits.push(`${costBit}, about £${(spend/7).toFixed(2)} a day.${stockBit}`);
   }
   if(lastShopItemCount){
     bits.push(`And you only need <strong>${lastShopItemCount} different ingredients</strong> to cook all of it.`);
@@ -4801,7 +4887,7 @@ function buildCoachSummary(dayTotals, weeklyCost, weeklyBudget){
     <div class="coach-stats">
       <span class="coach-stat"><b>${avgCal}</b>kcal / day</span>
       <span class="coach-stat"><b class="gold">${avgProtein}g</b>protein / day</span>
-      <span class="coach-stat"><b class="orange">£${weeklyCost.toFixed(2)}</b>for the week</span>
+      <span class="coach-stat"><b class="orange">£${weeklyCost.toFixed(2)}</b>of food eaten</span>
       ${lastShopItemCount ? `<span class="coach-stat"><b>${lastShopItemCount}</b>ingredients to buy</span>` : ''}
       ${proteinDays !== null ? `<span class="coach-stat"><b>${proteinDays}/7</b>days on protein</span>` : ''}
     </div>
@@ -4879,39 +4965,55 @@ function renderWeekUI(){
     </div>`;
   });
 
-  const overBudget = ws.weeklyBudget && weeklyCost > ws.weeklyBudget;
+  /* Budget is measured against what you actually hand over at the till, with
+     anything already in your kitchen deducted. The older check used the value
+     of the food eaten, which both ignored your leftovers and ignored the fact
+     that packs come in fixed sizes. */
+  const shopNow = shopCostFor(planMatrix, ws.activeSlots);
+  const shopSpend = shopNow.shopTotal, shopSaved = shopNow.savedFromStock;
+  const overBudget = ws.weeklyBudget && shopSpend > ws.weeklyBudget;
 
   // Budget suggestions: find the specific swaps that would save the most money
   let budgetSuggestHTML = '';
   if(overBudget){
-    const overspend = weeklyCost - ws.weeklyBudget;
+    const overspend = shopSpend - ws.weeklyBudget;
     const swapIdeas = [];
     DAYS.forEach((day, di)=>{
       ws.activeSlots.forEach(slot=>{
         const cands = ws.candidatesBySlot[slot].list;
         if(cands.length < 2) return;
-        const current = cands[ws.planIndex[di][slot]];
-        const cheapest = [...cands].sort((a,b)=>a.price-b.price)[0];
-        const saving = current.price - cheapest.price;
+        const curIdx = ws.planIndex[di][slot];
+        const current = cands[curIdx];
+        let bestIdx = curIdx, bestCost = shopSpend;
+        /* Price each alternative by rebuilding the whole shop. A recipe with a
+           lower per-serving price can still raise the bill if it forces a new
+           pack open, and only the full list knows that. */
+        budgetSwapCandidates(cands, curIdx).forEach(i=>{
+          ws.planIndex[di][slot] = i;
+          const cost = shopCostFor(planMatrixFrom(ws.planIndex), ws.activeSlots).shopTotal;
+          if(cost < bestCost - 0.005){ bestCost = cost; bestIdx = i; }
+        });
+        ws.planIndex[di][slot] = curIdx;
+        const saving = shopSpend - bestCost;
         if(saving > 0.3){
-          swapIdeas.push({ day, slot, from: current.name, fromPrice: current.price, to: cheapest.name, toPrice: cheapest.price, saving });
+          swapIdeas.push({ day, slot, from: current.name, fromPrice: current.price,
+                           to: cands[bestIdx].name, toPrice: cands[bestIdx].price, saving });
         }
       });
     });
     swapIdeas.sort((a,b)=>b.saving-a.saving);
     const topSwaps = swapIdeas.slice(0,3);
-    const totalPossible = swapIdeas.reduce((s,x)=>s+x.saving,0);
 
     if(topSwaps.length){
       const swapLines = topSwaps.map(s=>
-        `<li>${s.day} ${s.slot}: swap <strong>${s.from}</strong> (£${s.fromPrice.toFixed(2)}) for <strong>${s.to}</strong> (£${s.toPrice.toFixed(2)}) — saves £${s.saving.toFixed(2)}</li>`
+        `<li>${s.day} ${s.slot}: swap <strong>${s.from}</strong> for <strong>${s.to}</strong> — takes about £${s.saving.toFixed(2)} off the shop</li>`
       ).join('');
       budgetSuggestHTML = `
       <div style="background:rgba(143,174,93,0.1);border:1px solid rgba(143,174,93,0.35);border-radius:4px;padding:16px 18px;margin-top:18px;font-size:13px;color:var(--paper);">
         <p style="margin:0 0 8px;font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--herb);">💡 You're £${overspend.toFixed(2)} over budget — here's how to fix it</p>
         <ul style="margin:0 0 8px;padding-left:18px;line-height:1.7;">${swapLines}</ul>
         <button class="btn small" style="margin:4px 0 10px;" onclick="applyBudgetSwaps()" type="button">⚡ Apply all savings for me</button>
-        <p class="hint" style="margin:0;">Or use the ⟳ swap button on individual meals if you'd rather choose yourself. Across the whole week there's up to £${totalPossible.toFixed(2)} of savings available through swaps. Cheaper protein sources (chicken, eggs, lentils, beans) generally cost less than salmon, lamb or prawns.</p>
+        <p class="hint" style="margin:0;">Or use the ⟳ swap button on individual meals if you'd rather choose yourself. Each figure is what that one swap takes off the shop on its own; making several together usually saves a little less, because two meals can share the same pack. Cheaper protein sources (chicken, eggs, lentils, beans) generally cost less than salmon, lamb or prawns.</p>
       </div>`;
     } else {
       budgetSuggestHTML = `
@@ -4955,7 +5057,7 @@ function renderWeekUI(){
     : `<div class="week-cards">${dayCards}</div>`;
 
   document.getElementById('weekResults').innerHTML = `
-    ${buildCoachSummary(dayTotals, weeklyCost, ws.weeklyBudget)}
+    ${buildCoachSummary(dayTotals, weeklyCost, ws.weeklyBudget, shopSpend, shopSaved)}
 
     <section class="week-section">
       <div class="week-section-head">
@@ -4981,8 +5083,9 @@ function renderWeekUI(){
         <span class="sub">across the whole week</span>
       </div>
       <div class="week-summary">
-        <div><span class="n">£${weeklyCost.toFixed(2)}</span>Estimated weekly cost</div>
-        ${ws.weeklyBudget ? `<div><span class="n ${overBudget?'over':''}">${overBudget? '+£'+(weeklyCost-ws.weeklyBudget).toFixed(2)+' over' : '£'+(ws.weeklyBudget-weeklyCost).toFixed(2)+' under'}</span>vs your £${ws.weeklyBudget.toFixed(2)} budget</div>` : ''}
+        <div><span class="n">£${shopSpend.toFixed(2)}</span>This week's shop</div>
+        ${ws.weeklyBudget ? `<div><span class="n ${overBudget?'over':''}">${overBudget? '+£'+(shopSpend-ws.weeklyBudget).toFixed(2)+' over' : '£'+(ws.weeklyBudget-shopSpend).toFixed(2)+' under'}</span>vs your £${ws.weeklyBudget.toFixed(2)} budget</div>` : ''}
+        ${shopSaved > 0.5 ? `<div><span class="n good">£${shopSaved.toFixed(2)}</span>covered by your kitchen</div>` : ''}
         <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.cal,0)/7)}</span>Avg daily kcal</div>
         <div><span class="n">${Math.round(dayTotals.reduce((s,d)=>s+d.protein,0)/7)}g</span>Avg daily protein</div>
       </div>
