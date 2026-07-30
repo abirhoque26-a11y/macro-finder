@@ -183,6 +183,61 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .shop-item .buy.stock{color:var(--herb,#8FAE5D);}
 .pantry-hit-note.uses{color:var(--herb,#8FAE5D);font-weight:600;}
 .shop-note .saved{color:var(--herb,#8FAE5D);}
+/* ---- the how-it-works guide ---- */
+.guide-link{color:var(--orange-deep,#C3410F);text-decoration:underline;text-underline-offset:3px;}
+.guide-link:hover{color:var(--ink);}
+.guide-loop{margin-top:64px;border:1.5px solid var(--ink);border-radius:8px;background:var(--card,#FFF);overflow:hidden;}
+.gl-head{padding:30px 32px 26px;background:var(--ink);color:var(--cream,#F4EFE1);}
+.gl-head h3{font-family:'Anton',sans-serif;font-weight:400;font-size:30px;line-height:1.1;
+  text-transform:uppercase;letter-spacing:.01em;margin:0 0 12px;}
+.gl-head p{font-size:14.5px;line-height:1.65;margin:0;max-width:70ch;opacity:.92;}
+.loop-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));}
+.loop-steps li{padding:26px 26px 28px;border-right:1px solid var(--line,rgba(20,20,18,.14));
+  border-bottom:1px solid var(--line,rgba(20,20,18,.14));font-size:13.5px;line-height:1.6;}
+.loop-steps li:last-child{border-right:none;}
+.ls-n{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:999px;
+  background:var(--herb,#8FAE5D);color:#FFF;font-family:'Anton',sans-serif;font-size:15px;margin-bottom:14px;}
+.loop-steps strong{display:block;font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
+.loop-steps em{font-style:normal;font-weight:600;color:var(--orange-deep,#C3410F);}
+.gl-note{margin:0;padding:22px 26px;font-size:13px;line-height:1.65;color:var(--muted);
+  background:rgba(143,174,93,.09);}
+.guide-faq{margin-top:56px;}
+.guide-faq h3{font-family:'Anton',sans-serif;font-weight:400;font-size:26px;text-transform:uppercase;
+  letter-spacing:.01em;margin:0 0 18px;}
+.guide-faq details{border-top:1px solid var(--line,rgba(20,20,18,.16));padding:0;}
+.guide-faq details:last-child{border-bottom:1px solid var(--line,rgba(20,20,18,.16));}
+.guide-faq summary{cursor:pointer;list-style:none;padding:17px 34px 17px 0;position:relative;
+  font-family:'Oswald',sans-serif;font-size:16px;font-weight:500;letter-spacing:.02em;}
+.guide-faq summary::-webkit-details-marker{display:none;}
+.guide-faq summary::after{content:'+';position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  font-family:'Anton',sans-serif;font-size:20px;color:var(--orange-deep,#C3410F);line-height:1;}
+.guide-faq details[open] summary::after{content:'\2013';}
+.guide-faq summary:hover{color:var(--orange-deep,#C3410F);}
+.guide-faq details p{margin:0 0 20px;font-size:14px;line-height:1.7;max-width:78ch;color:var(--muted);}
+@media(max-width:620px){
+  .gl-head{padding:24px 20px 22px;}
+  .gl-head h3{font-size:24px;}
+  .loop-steps li{padding:22px 20px;border-right:none;}
+}
+.ksave{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin-top:32px;
+  border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--herb,#8FAE5D);color:#FFF;}
+.ksave-main{flex:1 1 260px;display:flex;align-items:center;gap:18px;padding:24px 26px;}
+.ksave-fig{font-family:'Anton',sans-serif;font-size:60px;line-height:.9;letter-spacing:.01em;}
+.ksave-lab{font-family:'Oswald',sans-serif;font-size:17px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.05em;line-height:1.25;}
+.ksave-lab em{display:block;font-family:'Work Sans',sans-serif;font-size:12.5px;font-weight:400;
+  font-style:normal;text-transform:none;letter-spacing:0;opacity:.9;margin-top:5px;}
+.ksave-side{flex:0 1 260px;display:flex;flex-direction:column;justify-content:center;gap:3px;
+  padding:24px 26px;background:rgba(0,0,0,.14);}
+.ksave-side-fig{font-family:'Anton',sans-serif;font-size:30px;line-height:1;}
+.ksave-side-lab{font-size:12.5px;line-height:1.45;opacity:.92;}
+@media(max-width:620px){
+  .ksave-main{padding:20px;gap:14px;}
+  .ksave-fig{font-size:46px;}
+  .ksave-lab{font-size:15px;}
+  .ksave-side{flex-basis:100%;padding:16px 20px;}
+}
 .saved-banner{display:flex;align-items:center;gap:16px;margin:0 0 18px;padding:18px 22px;
   background:var(--herb,#8FAE5D);color:#FFF;border-radius:8px;border:1.5px solid var(--ink);flex-wrap:wrap;}
 .sb-fig{font-family:'Anton',sans-serif;font-size:40px;line-height:1;}
@@ -826,7 +881,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
       <p class="hero-sub">Tell us your targets. We'll build your week — recipes matched to your macros, a shopping list with UK supermarket prices, and swaps when you're over budget.</p>
       <div class="hero-cta">
         <button class="cta-orange" id="heroStartBtn" type="button">Build my week →</button>
-        <span class="micro">Free · No spreadsheet · 60 seconds</span>
+        <a class="micro guide-link" href="#how">New here? How it works</a>
       </div>
     </div>
     <div class="hero-photo" id="heroPhoto" role="button" tabindex="0" title="View this recipe"
@@ -1274,7 +1329,9 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <p class="sec-eyebrow">The Kitchen</p>
     <h2 class="sec-title">Cook with<br><span class="accent">what you've got.</span></h2>
     <p class="serif-line">tick what's in your kitchen — we'll find the recipes.</p>
+    <p class="hint" style="margin:-8px 0 0;"><a class="guide-link" href="#how">How the kitchen loop works →</a></p>
 
+    <div id="kitchenSavings"></div>
     <div id="larderBox" style="margin-top:32px;"></div>
     <div id="kitchenLock" style="display:none;margin-top:36px;"></div>
     <div class="form-panel" id="kitchenPanel" style="margin-top:36px;">
@@ -1310,29 +1367,69 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
 
 <section class="method-sec" id="how">
   <div class="inner">
-    <p class="sec-eyebrow">The Method</p>
-    <h2 class="sec-title">From targets to trolley<br>in under a minute.</h2>
+    <p class="sec-eyebrow">How it works</p>
+    <h2 class="sec-title">Start here.<br><span class="accent">The rest follows.</span></h2>
+    <p class="serif-line">four steps to a week of food — then one loop that keeps paying you back.</p>
+
     <div class="method-grid">
       <div class="m-col">
         <span class="m-num">01</span>
         <h4>Set your targets</h4>
-        <p>Kcal, protein and budget — or let us suggest them from your weight and goal.</p>
+        <p>Two ways in. <strong>Quick plan</strong> works them out from your height, weight, age and goal. <strong>Advanced</strong> is for when you already know your numbers and want to type them straight in. Either way you end up with a daily calorie and protein target.</p>
       </div>
       <div class="m-col">
         <span class="m-num">02</span>
-        <h4>Pick your slots</h4>
-        <p>Breakfast, lunch, dinner, snack, shake. Any subset of the week, with as much variety as you like.</p>
+        <h4>Build your week</h4>
+        <p>Choose which meals you want planned — breakfast, lunch, dinner, snack — then add any filters: diet, skill level, preferred protein, a weekly budget. Press <strong>Build my week</strong> and you get 7 days of meals scored against your targets.</p>
       </div>
       <div class="m-col">
         <span class="m-num">03</span>
-        <h4>Match recipes</h4>
-        <p>We score every recipe against your macros, diet, skill level and ingredient preferences.</p>
+        <h4>Do the shop</h4>
+        <p>One combined list, priced by whole packs rather than exact amounts, with search links for five UK supermarkets. When you get home press <strong>I've done this shop</strong> — that one tap is what starts the loop below.</p>
       </div>
       <div class="m-col">
         <span class="m-num">04</span>
-        <h4>Shop with prices</h4>
-        <p>One consolidated list, linked to five UK supermarkets. Swap suggestions if you're over budget.</p>
+        <h4>Cook and tick</h4>
+        <p>Tick each day off on the cooking checklist as you go. This builds your streak and your history — and it is what tells the site which ingredients you have actually used up.</p>
       </div>
+    </div>
+
+    <div class="guide-loop">
+      <div class="gl-head">
+        <h3>The part that makes this different: your kitchen</h3>
+        <p>Most planners forget about you the moment you close the shopping list. This one keeps track of what is left in your cupboards and fridge, and spends it for you next week. It only works if you do two things: press <strong>I've done this shop</strong>, and tick days off as you cook.</p>
+      </div>
+      <ol class="loop-steps">
+        <li><span class="ls-n">1</span><strong>You shop</strong>Press <em>I've done this shop</em>. Everything you bought goes into My kitchen — including the extra you were forced to buy because rice comes in 1kg bags.</li>
+        <li><span class="ls-n">2</span><strong>You cook</strong>Tick the day off. Those ingredients come back out of My kitchen, so what is showing is what is really there.</li>
+        <li><span class="ls-n">3</span><strong>It adds up</strong>Whatever is left sits in My kitchen with a value against it. Fresh items age out on their own so you are never told you still have week-old salad.</li>
+        <li><span class="ls-n">4</span><strong>Next week is cheaper</strong>That stock comes off your next shopping list, and with <em>Use up what I already have</em> switched on, meals that spend it are preferred — as long as they still fit your targets and filters.</li>
+      </ol>
+      <p class="gl-note">Changed your mind and ate out? Untick the day and the ingredients go straight back. Amounts wrong? Tap any item in My kitchen to correct it. A kitchen list you do not trust is worse than none, so everything in it can be edited or cleared.</p>
+    </div>
+
+    <div class="guide-faq">
+      <h3>Straight answers</h3>
+      <details>
+        <summary>Why is the shop more than the food is "worth"?</summary>
+        <p>Because you buy packs, not portions. If a recipe needs 100g of rice you still go home with a 1kg bag. We show both numbers: what the shop costs at the till, and what the food you will actually eat is worth. The difference is not waste — it is next week's cooking, which is exactly what My kitchen tracks.</p>
+      </details>
+      <details>
+        <summary>The pack size or price is wrong for my shop</summary>
+        <p>Change it. Every priced item on the shopping list has a <strong>wrong size?</strong> link — set the pack size and price you actually pay and it is remembered for every future week. Our defaults are mid-market own-brand estimates, not live supermarket data.</p>
+      </details>
+      <details>
+        <summary>It says I am over budget — does that count food I already have?</summary>
+        <p>No. The budget is measured against what you will actually hand over at the till, after everything already in your kitchen has been deducted. If it still says you are over, the <strong>Apply all savings for me</strong> button finds the swaps that genuinely reduce the bill — it prices the whole shop for each one, because a cheaper-looking recipe can cost more if it forces a new pack open.</p>
+      </details>
+      <details>
+        <summary>How accurate are the prices and macros?</summary>
+        <p>Prices are estimates for UK supermarkets and will drift with promotions and seasons — use them to compare options, not as the price you will pay. Calories and protein are set per recipe; carbs and fat are derived from the remaining calories, so treat those two as a close guide rather than a measurement.</p>
+      </details>
+      <details>
+        <summary>Do I have to use My kitchen?</summary>
+        <p>No. Skip it and everything else works exactly as before — you will just get a fresh shopping list every week with nothing deducted. The tracking only starts when you press <em>I've done this shop</em>.</p>
+      </details>
     </div>
   </div>
 </section>
@@ -4115,6 +4212,43 @@ function removeLarderItem(key){
   if(weekState.activeSlots && weekState.activeSlots.length) renderWeekUI();
 }
 
+/* The running total is the strongest reason to keep the kitchen up to date, so
+   it leads the section instead of sitting in a hint line at the bottom. Before
+   anything has been saved it leads with what is in stock instead, because
+   "£0.00 saved" is a discouraging first thing to show someone. */
+function renderKitchenSavings(){
+  const box = document.getElementById('kitchenSavings');
+  if(!box) return;
+  const keys = Object.keys(larder);
+  const worth = keys.reduce(function(sum, k){
+    const p = effectivePack(k);
+    return sum + (p ? (larder[k].amount / p[0]) * p[2] : 0);
+  }, 0);
+  if(larderSaved < 0.5 && !keys.length){ box.innerHTML = ''; return; }
+
+  if(larderSaved >= 0.5){
+    box.innerHTML = `
+      <div class="ksave">
+        <div class="ksave-main">
+          <span class="ksave-fig">£${larderSaved.toFixed(2)}</span>
+          <span class="ksave-lab">saved so far<em>by cooking from what you already had</em></span>
+        </div>
+        ${worth > 0.5 ? `<div class="ksave-side">
+          <span class="ksave-side-fig">£${worth.toFixed(2)}</span>
+          <span class="ksave-side-lab">in your kitchen right now &mdash; this comes off your next shop</span>
+        </div>` : ''}
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <div class="ksave">
+        <div class="ksave-main">
+          <span class="ksave-fig">£${worth.toFixed(2)}</span>
+          <span class="ksave-lab">in your kitchen<em>this comes off your next shopping list</em></span>
+        </div>
+      </div>`;
+  }
+}
+
 /* The control only makes sense once there is something to use up, so it hides
    itself when the kitchen is empty. */
 function renderUseUpControl(){
@@ -4147,6 +4281,7 @@ function renderLarder(){
   if(!box) return;
   pruneLarder();
   renderUseUpControl();
+  renderKitchenSavings();
   const keys = Object.keys(larder).sort();
   if(!keys.length){
     box.innerHTML = `<p class="hint" style="margin:0;">Nothing recorded yet. Build a week, press <strong>I've done this shop</strong> on the shopping list, then tick days off as you cook &mdash; what is left shows here and comes off next week's list.</p>`;
@@ -4177,8 +4312,7 @@ function renderLarder(){
       <h3>Still in your kitchen</h3>
       <span class="hint">${keys.length} item${keys.length!==1?'s':''} &middot; about \u00a3${worth.toFixed(2)}${soonCount ? ` &middot; <strong class="soon-t">${soonCount} to use soon</strong>` : ''} &middot; <a href="#" onclick="clearLarder();return false;" style="color:var(--orange-deep);">clear</a></span>
     </div>
-    <div class="lards">${chips}</div>
-    ${larderSaved > 0.5 ? `<p class="hint" style="margin:12px 0 0;">Using this stock has saved you about <strong>\u00a3${larderSaved.toFixed(2)}</strong> so far.</p>` : ''}`;
+    <div class="lards">${chips}</div>`;
 }
 
 /* Amounts drift from reality — you use a bit more, someone else takes some.
