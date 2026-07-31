@@ -184,39 +184,46 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .pantry-hit-note.uses{color:var(--herb,#8FAE5D);font-weight:600;}
 .shop-note .saved{color:var(--herb,#8FAE5D);}
 /* ---- kitchen demo for signed-out visitors ---- */
-.kdemo{margin-top:20px;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--card,#FFF);}
+/* The kitchen section is dark with cream text; this panel is a light card
+   inside it, so it must set its own text colour or everything that does not
+   override it inherits cream and disappears. */
+.kdemo{margin-top:20px;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;
+  background:var(--card,#FFF);color:var(--ink);}
 .kd-head{padding:26px 28px 24px;background:var(--ink);color:var(--cream,#F4EFE1);}
 .kd-tag{display:inline-block;font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.16em;
   text-transform:uppercase;color:var(--gold,#D9B44A);margin-bottom:10px;}
 .kd-head h3{font-family:'Anton',sans-serif;font-weight:400;font-size:28px;line-height:1.1;
   text-transform:uppercase;margin:0 0 10px;}
-.kd-head p{margin:0 0 16px;font-size:14px;line-height:1.6;max-width:64ch;opacity:.9;}
-.kd-chips{display:flex;flex-wrap:wrap;gap:7px;}
-.kd-chip{font-size:12px;padding:6px 12px;border-radius:999px;background:rgba(244,239,225,.13);
-  border:1px solid rgba(244,239,225,.28);}
+.kd-head p{margin:0 0 16px;font-size:15.5px;line-height:1.7;max-width:64ch;opacity:.97;}
+.kd-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.kd-chip{font-size:13.5px;padding:7px 14px;border-radius:999px;background:rgba(244,239,225,.18);
+  border:1px solid rgba(244,239,225,.42);}
 .kd-chip b{font-weight:700;}
 .kd-cols{display:grid;grid-template-columns:1fr 1fr;}
 .kd-col{padding:22px 24px 24px;border-right:1px solid var(--line,rgba(20,20,18,.14));}
 .kd-col:last-child{border-right:none;}
 .kd-col.kd-on{background:rgba(143,174,93,.08);}
-.kd-col h4{font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;text-transform:uppercase;
-  letter-spacing:.08em;margin:0 0 14px;color:var(--muted);}
-.kd-col.kd-on h4{color:var(--herb,#8FAE5D);}
-.kd-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:13px;}
-.kd-list li{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.45;}
-.kd-i{flex:0 0 auto;width:21px;height:21px;border-radius:999px;display:inline-flex;align-items:center;
-  justify-content:center;font-family:'Anton',sans-serif;font-size:11px;background:var(--line,#E4DECD);color:var(--ink);}
-.kd-on .kd-i{background:var(--herb,#8FAE5D);color:#FFF;}
+.kd-col h4{font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.08em;margin:0 0 15px;color:var(--ink);opacity:.7;}
+/* the mid green fails contrast on a light panel, so labels use the deep tone */
+.kd-col.kd-on h4{color:var(--herb-deep,#4E6B24);opacity:1;}
+.kd-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:15px;}
+.kd-list li{display:flex;gap:12px;align-items:flex-start;font-size:15.5px;line-height:1.5;}
+.kd-i{flex:0 0 auto;width:23px;height:23px;border-radius:999px;display:inline-flex;align-items:center;
+  justify-content:center;font-family:'Anton',sans-serif;font-size:12px;background:var(--line,#E4DECD);color:var(--ink);}
+.kd-on .kd-i{background:var(--herb-deep,#4E6B24);color:#FFF;}
 .kd-meal{display:block;font-weight:500;}
-.kd-meal em{display:block;font-style:normal;font-size:11.5px;margin-top:3px;color:var(--herb,#8FAE5D);}
-.kd-meal em.kd-none{color:var(--muted);opacity:.75;}
-.kd-sub{margin:16px 0 0;padding-top:12px;border-top:1px solid var(--line,rgba(20,20,18,.14));
-  font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--muted);}
-.kd-on .kd-sub{color:var(--herb-deep,#4E6B24);}
+.kd-meal em{display:block;font-style:normal;font-size:13.5px;margin-top:4px;line-height:1.45;
+  color:var(--herb-deep,#4E6B24);}
+.kd-meal em.kd-none{color:var(--ink);opacity:.55;}
+.kd-sub{margin:18px 0 0;padding-top:14px;border-top:1px solid var(--line,rgba(20,20,18,.14));
+  font-family:'Oswald',sans-serif;font-size:15.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--ink);opacity:.72;}
+.kd-on .kd-sub{color:var(--herb-deep,#4E6B24);opacity:1;}
 .kd-foot{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
   padding:20px 24px;border-top:1.5px solid var(--ink);background:rgba(143,174,93,.12);}
-.kd-fig{font-family:'Anton',sans-serif;font-size:34px;color:var(--herb-deep,#4E6B24);margin-right:10px;}
-.kd-fig-lab{font-size:13px;line-height:1.5;}
+.kd-fig{font-family:'Anton',sans-serif;font-size:38px;color:var(--herb-deep,#4E6B24);margin-right:10px;}
+.kd-fig-lab{font-size:14.5px;line-height:1.6;}
 @media(max-width:620px){
   .kd-cols{grid-template-columns:1fr;}
   .kd-col{border-right:none;border-bottom:1px solid var(--line,rgba(20,20,18,.14));}
@@ -255,7 +262,9 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
   font-family:'Anton',sans-serif;font-size:20px;color:var(--orange-deep,#C3410F);line-height:1;}
 .guide-faq details[open] summary::after{content:'\2013';}
 .guide-faq summary:hover{color:var(--orange-deep,#C3410F);}
-.guide-faq details p{margin:0 0 20px;font-size:14px;line-height:1.7;max-width:78ch;color:var(--muted);}
+/* this section sits on gold, where the grey muted tone is too low-contrast */
+.guide-faq details p{margin:0 0 20px;font-size:14.5px;line-height:1.7;max-width:78ch;
+  color:var(--ink);opacity:.84;}
 @media(max-width:620px){
   .gl-head{padding:24px 20px 22px;}
   .gl-head h3{font-size:24px;}
@@ -430,9 +439,22 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .pro-small{font-size:11.5px;line-height:1.6;color:var(--muted);margin:0 0 6px;}
 .pro-small a{color:var(--orange-deep);}
 /* Locked panels: visible but inert, so people can see what they would get */
-.pro-lock{background:var(--card);border:1.5px dashed var(--line-strong);border-radius:8px;padding:26px 24px;text-align:center;margin:16px 0;}
-.pro-lock h4{font-family:'Anton',sans-serif;font-weight:400;font-size:21px;text-transform:uppercase;margin:0 0 8px;}
-.pro-lock p{font-size:14px;line-height:1.6;color:var(--muted);margin:0 0 16px;max-width:420px;margin-left:auto;margin-right:auto;}
+/* A dashed grey box read as an error state rather than an offer, so these use
+   the Pro gold and a badge saying what they are. */
+.pro-lock{background:linear-gradient(rgba(217,180,74,.14),rgba(217,180,74,.14)),var(--card);
+  border:2px solid var(--gold);border-radius:8px;padding:30px 26px;text-align:center;margin:16px 0;
+  color:var(--ink);}
+.pro-lock::before{content:'✦ Pro feature';display:inline-block;font-family:'Oswald',sans-serif;
+  font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#4A3C0E;
+  background:var(--gold);padding:5px 13px;border-radius:999px;margin-bottom:15px;}
+.pro-lock h4{font-family:'Anton',sans-serif;font-weight:400;font-size:27px;line-height:1.12;
+  text-transform:uppercase;letter-spacing:.01em;color:var(--ink);margin:0 0 10px;}
+.pro-lock p{font-size:15px;line-height:1.65;color:var(--ink);opacity:.82;margin:0 0 18px;
+  max-width:440px;margin-left:auto;margin-right:auto;}
+/* the sign-in prompt is not a paid feature, so it must not wear the Pro badge */
+.pro-lock.signin{background:var(--card);border-color:var(--line-strong);}
+.pro-lock.signin::before{content:'Free account';background:var(--line-strong);color:var(--ink);}
+@media(max-width:520px){.pro-lock{padding:24px 18px;}.pro-lock h4{font-size:22px;}}
 .trial-note{background:rgba(217,180,74,.22);border:1px solid var(--gold);border-radius:6px;padding:11px 16px;font-size:13px;color:#3F3B2F;margin:0 0 16px;}
 @media(max-width:520px){.pro-plans{grid-template-columns:1fr;}.pro-box{padding:24px 18px;}}
 .recipe-modal-close:hover{background:var(--orange);border-color:var(--orange);color:#FFF6ED;}
@@ -1784,6 +1806,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session)=>{
   favourites = currentUser ? await loadFavourites() : [];
   progress = currentUser ? await loadProgress() : {};
   savedPlans = currentUser ? await loadSavedPlans() : {};
+  if(!currentUser) clearKitchenState();
   cookedHistory = await loadHistory();
   if(currentUser){
     // anything logged as a guest on this device comes with them
@@ -2184,12 +2207,19 @@ function applyProfile(p){
       document.querySelectorAll('#chip-slots .chip').forEach(c=>c.classList.toggle('active', activeSlots.includes(c.dataset.val)));
     }
     if(p.preferredStore){ preferredStore = p.preferredStore; localStorage.setItem('mm_store', preferredStore); }
-    if(Array.isArray(p.pantry)) pantryItems = p.pantry.slice();
-    if(p.larder && typeof p.larder === 'object') larder = p.larder;
-    if(p.packOverrides && typeof p.packOverrides === 'object') packOverrides = p.packOverrides;
-    if(typeof p.larderSaved === 'number') larderSaved = p.larderSaved;
-    if(typeof p.useUpLeftovers === 'boolean') useUpLeftovers = p.useUpLeftovers;
-    pruneLarder();
+    /* Kitchen stock, pack prices and the running savings total are account
+       data, not guest settings. The profile is also mirrored to localStorage,
+       so restoring these without a signed-in user would put one person's
+       kitchen — and the state of a Pro-only feature — in front of whoever
+       opens the browser next. Targets and preferences above stay guest-usable. */
+    if(currentUser){
+      if(Array.isArray(p.pantry)) pantryItems = p.pantry.slice();
+      if(p.larder && typeof p.larder === 'object') larder = p.larder;
+      if(p.packOverrides && typeof p.packOverrides === 'object') packOverrides = p.packOverrides;
+      if(typeof p.larderSaved === 'number') larderSaved = p.larderSaved;
+      if(typeof p.useUpLeftovers === 'boolean') useUpLeftovers = p.useUpLeftovers;
+      pruneLarder();
+    }
     if(typeof p.pantryStaples === 'boolean') document.getElementById('pantryStaples').checked = p.pantryStaples;
     if(Array.isArray(p.pinnedRecipes)) pinnedRecipes = p.pinnedRecipes.slice();
     if(typeof p.quickOnly === 'boolean'){ state.quickOnly = p.quickOnly; document.getElementById('quickChip').classList.toggle('active', p.quickOnly); }
@@ -2379,7 +2409,23 @@ function restoreProfileOnce(){
   let local = null;
   try{ local = JSON.parse(localStorage.getItem('mm_profile') || 'null'); }catch(e){}
   const p = remote || local;
-  if(p){ applyProfile(p); profileApplied = true; }
+  /* Only count it as done once a signed-in pass has run. On a signed-in page
+     load this fires first as a guest (restoring targets), then again from the
+     auth handler once the session resolves — and that second pass is the one
+     that restores the kitchen. Latching on the first would lose it. */
+  if(p){ applyProfile(p); profileApplied = !!currentUser; }
+}
+
+/* Signing out must not leave the previous person's kitchen, or their running
+   savings total, on screen for whoever uses the browser next. profileApplied
+   is cleared too, so signing back in restores everything without a refresh. */
+function clearKitchenState(){
+  larder = {};
+  packOverrides = {};
+  larderSaved = 0;
+  pantryItems = [];
+  useUpLeftovers = true;
+  profileApplied = false;
 }
 
 let RECIPES = [];
@@ -4848,7 +4894,7 @@ function renderProgressSection(){
   if(!body) return;
 
   if(!currentUser){
-    body.innerHTML = `<div class="pro-lock"><h4>Sign in to track your cooking</h4>
+    body.innerHTML = `<div class="pro-lock signin"><h4>Sign in to track your cooking</h4>
       <p>Tick off the days you cook and we'll keep a permanent record — streaks, monthly totals, and a year at a glance.</p>
       <button class="btn small" type="button" onclick="document.getElementById('showAuthBtn').click()">Create a free account</button></div>`;
     return;
