@@ -183,6 +183,47 @@ h1.display{font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(54px,7
 .shop-item .buy.stock{color:var(--herb,#8FAE5D);}
 .pantry-hit-note.uses{color:var(--herb,#8FAE5D);font-weight:600;}
 .shop-note .saved{color:var(--herb,#8FAE5D);}
+/* ---- kitchen demo for signed-out visitors ---- */
+.kdemo{margin-top:20px;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--card,#FFF);}
+.kd-head{padding:26px 28px 24px;background:var(--ink);color:var(--cream,#F4EFE1);}
+.kd-tag{display:inline-block;font-family:'Oswald',sans-serif;font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--gold,#D9B44A);margin-bottom:10px;}
+.kd-head h3{font-family:'Anton',sans-serif;font-weight:400;font-size:28px;line-height:1.1;
+  text-transform:uppercase;margin:0 0 10px;}
+.kd-head p{margin:0 0 16px;font-size:14px;line-height:1.6;max-width:64ch;opacity:.9;}
+.kd-chips{display:flex;flex-wrap:wrap;gap:7px;}
+.kd-chip{font-size:12px;padding:6px 12px;border-radius:999px;background:rgba(244,239,225,.13);
+  border:1px solid rgba(244,239,225,.28);}
+.kd-chip b{font-weight:700;}
+.kd-cols{display:grid;grid-template-columns:1fr 1fr;}
+.kd-col{padding:22px 24px 24px;border-right:1px solid var(--line,rgba(20,20,18,.14));}
+.kd-col:last-child{border-right:none;}
+.kd-col.kd-on{background:rgba(143,174,93,.08);}
+.kd-col h4{font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.08em;margin:0 0 14px;color:var(--muted);}
+.kd-col.kd-on h4{color:var(--herb,#8FAE5D);}
+.kd-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:13px;}
+.kd-list li{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.45;}
+.kd-i{flex:0 0 auto;width:21px;height:21px;border-radius:999px;display:inline-flex;align-items:center;
+  justify-content:center;font-family:'Anton',sans-serif;font-size:11px;background:var(--line,#E4DECD);color:var(--ink);}
+.kd-on .kd-i{background:var(--herb,#8FAE5D);color:#FFF;}
+.kd-meal{display:block;font-weight:500;}
+.kd-meal em{display:block;font-style:normal;font-size:11.5px;margin-top:3px;color:var(--herb,#8FAE5D);}
+.kd-meal em.kd-none{color:var(--muted);opacity:.75;}
+.kd-sub{margin:16px 0 0;padding-top:12px;border-top:1px solid var(--line,rgba(20,20,18,.14));
+  font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--muted);}
+.kd-on .kd-sub{color:var(--herb-deep,#4E6B24);}
+.kd-foot{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  padding:20px 24px;border-top:1.5px solid var(--ink);background:rgba(143,174,93,.12);}
+.kd-fig{font-family:'Anton',sans-serif;font-size:34px;color:var(--herb-deep,#4E6B24);margin-right:10px;}
+.kd-fig-lab{font-size:13px;line-height:1.5;}
+@media(max-width:620px){
+  .kd-cols{grid-template-columns:1fr;}
+  .kd-col{border-right:none;border-bottom:1px solid var(--line,rgba(20,20,18,.14));}
+  .kd-head{padding:22px 18px;}
+  .kd-head h3{font-size:23px;}
+  .kd-foot{padding:18px;}
+}
 /* ---- the how-it-works guide ---- */
 .guide-link{color:var(--orange-deep,#C3410F);text-decoration:underline;text-underline-offset:3px;}
 .guide-link:hover{color:var(--ink);}
@@ -1334,6 +1375,7 @@ table.week td.day{font-family:'Anton',sans-serif;font-size:17px;letter-spacing:.
     <div id="kitchenSavings"></div>
     <div id="larderBox" style="margin-top:32px;"></div>
     <div id="kitchenLock" style="display:none;margin-top:36px;"></div>
+    <div id="kitchenDemo" style="display:none;"></div>
     <div class="form-panel" id="kitchenPanel" style="margin-top:36px;">
       <div class="form-grid">
         <div class="field form-full">
@@ -5485,13 +5527,106 @@ function renderPantryResults(){
   `;
 }
 
+/* ---------- The kitchen demo ----------
+   Signed-out visitors could previously only read a description of the one
+   feature nothing else has. This runs the real scoring against a sample
+   kitchen so they can see it working before deciding to pay. It never writes
+   to the user's own data: the global larder is swapped in and out around the
+   calculation, and nothing here calls saveProfileSoon. */
+const DEMO_LARDER = {
+  'chicken breast': { amount: 600, unit: 'g' },
+  'basmati rice':   { amount: 700, unit: 'g' },
+  'halloumi':       { amount: 200, unit: 'g' },
+  'spinach':        { amount: 200, unit: 'g' }
+};
+
+function demoPickDinners(useUp){
+  const realLarder = larder, realFlag = useUpLeftovers;
+  larder = DEMO_LARDER;
+  useUpLeftovers = useUp;
+  try {
+    let pool = RECIPES.filter(r=>r.meal === 'dinner' && r.ing)
+      .map(r=>({ ...r, score: phaseAdjustedScore(r, 620, 45) }));
+    pool.sort((a,b)=>a.score-b.score);
+    applyLeftoverBias(pool);
+    return pool.slice(0,3).map(r=>({
+      name: r.name,
+      value: larderValueUsed(r),
+      uses: [...new Set(r.ing.map(p=>canonIng(p[0])).filter(k=>DEMO_LARDER[k]))]
+    }));
+  } finally {
+    larder = realLarder;
+    useUpLeftovers = realFlag;
+  }
+}
+
+function renderKitchenDemo(){
+  const box = document.getElementById('kitchenDemo');
+  if(!box) return;
+  if(isPro()){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+
+  const off = demoPickDinners(false);
+  const on  = demoPickDinners(true);
+  const saved = on.reduce((s,x)=>s+x.value, 0);
+  const offSaved = off.reduce((s,x)=>s+x.value, 0);
+  const stock = Object.keys(DEMO_LARDER).map(k=>{
+    const a = DEMO_LARDER[k];
+    return `<span class="kd-chip">${escHtml(k)} <b>${a.amount}${a.unit === 'count' ? '' : a.unit}</b></span>`;
+  }).join('');
+
+  /* Annotated the same way on both sides. Claiming the left-hand meals use
+     nothing would be a lie whenever one happens to overlap, and the subtotals
+     make the point without needing that. */
+  const col = list => list.map((m,i)=>`
+    <li>
+      <span class="kd-i">${i+1}</span>
+      <span class="kd-meal">${escHtml(m.name)}
+        ${m.uses.length
+          ? `<em>uses your ${m.uses.map(escHtml).join(', ')}</em>`
+          : '<em class="kd-none">nothing from your kitchen</em>'}
+      </span>
+    </li>`).join('');
+  const subtotal = v => `<p class="kd-sub">£${v.toFixed(2)} from your kitchen</p>`;
+
+  box.innerHTML = `
+    <div class="kdemo">
+      <div class="kd-head">
+        <span class="kd-tag">Live demo &middot; sample kitchen</span>
+        <h3>Watch it spend your leftovers</h3>
+        <p>Say last week left you with these four things. Below is what the planner picks for dinner &mdash; the same recipes, scored the same way, with one setting changed.</p>
+        <div class="kd-chips">${stock}</div>
+      </div>
+      <div class="kd-cols">
+        <div class="kd-col">
+          <h4>Ignoring your kitchen</h4>
+          <ol class="kd-list">${col(off)}</ol>
+          ${subtotal(offSaved)}
+        </div>
+        <div class="kd-col kd-on">
+          <h4>Using it up</h4>
+          <ol class="kd-list">${col(on)}</ol>
+          ${subtotal(saved)}
+        </div>
+      </div>
+      <div class="kd-foot">
+        <div>
+          <span class="kd-fig">£${saved.toFixed(2)}</span>
+          <span class="kd-fig-lab">of these three dinners comes out of the kitchen instead of the shop, up from £${offSaved.toFixed(2)} &mdash; and it still hits the same calorie and protein targets.</span>
+        </div>
+        <button class="btn small" type="button" onclick="openProModal('My Kitchen')">Do this with your kitchen &mdash; 3-day free trial</button>
+      </div>
+    </div>`;
+}
+
 function renderKitchenGate(){
   const lock = document.getElementById('kitchenLock');
   const panel = document.getElementById('kitchenPanel');
   if(!lock || !panel) return false;
-  if(isPro()){ lock.style.display = 'none'; panel.style.display = ''; return true; }
+  if(isPro()){ lock.style.display = 'none'; panel.style.display = ''; renderKitchenDemo(); return true; }
   panel.style.display = 'none';
   lock.style.display = '';
+  renderKitchenDemo();
   lock.innerHTML = `<div class="pro-lock"><h4>My Kitchen is part of Pro</h4>
     <p>Tick off what is already in your cupboards and we will show you every recipe you can make tonight without shopping.</p>
     <button class="btn small" type="button" onclick="openProModal('My Kitchen')">Start 3-day free trial</button></div>`;
